@@ -9,16 +9,17 @@ import SwiftUI
 import CoreLocation
 
 @main
-struct CarSpeedTestApp: App {
-    let historyStore = HistoryStore(accelerationData: []) // Initialize the HistoryStore
-
+struct AccelerationApp: App {
+    @StateObject private var historyStore = HistoryStore(accelerationData: [])
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(historyStore) // Inject the HistoryStore as an environment object
+                .environmentObject(historyStore)
         }
     }
 }
+
 
 //@main
 //struct CarSpeedTestApp: App {

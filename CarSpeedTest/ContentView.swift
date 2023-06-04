@@ -11,31 +11,41 @@ import SwiftUICharts
 
 struct ContentView: View {
     @EnvironmentObject var historyStore: HistoryStore // Use the injected HistoryStore
-
+    
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var locationManager = LocationManager()
     @State private var accelerationData: [AccelerationData] = []
     @AppStorage("SelectedUnitIndex") private var selectedUnitIndex = 0 // Use AppStorage to observe and store the selected unit index
     @State private var measurementInterval = UserDefaults.standard.double(forKey: "MeasurementInterval")
     @State private var displayPrecision = UserDefaults.standard.integer(forKey: "DisplayPrecision")
+    @State private var isShowingShareSheet = false
     
-    private let speedUnits: [String] = ["m/s", "km/h", "mph"]
+    private let speedUnits: [String] = ["km/h", "mph"]
     
     var currentSpeedUnit: String {
         speedUnits[selectedUnitIndex]
     }
     
-    
     var body: some View {
         TabView {
             VStack {
-                        Text("Acceleration: \(locationManager.acceleration, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)") // Use currentSpeedUnit to display the current speed unit
-                            .font(.title)
-                            .padding()
-                        
-                        LineChartView(data: accelerationData.map(\.acceleration), title: "Acceleration Speed")
-                            .padding()
+                Text("Acceleration: \(locationManager.acceleration, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)") // Use currentSpeedUnit to display the current speed unit
+                    .font(.title)
+                    .padding()
                 
+                LineChartView(data: accelerationData.map(\.acceleration),
+                              title: "Acceleration Speed",
+                              legend: "Acceleration",
+                              style: ChartStyle(backgroundColor: Color.white,
+                                                accentColor: Color.blue,
+                                                gradientColor: GradientColor(start: Color.blue, end: Color.white),
+                                                textColor: Color.black,
+                                                legendTextColor: Color.gray,
+                                                dropShadowColor: Color.gray),
+                              form: CGSize(width: UIScreen.main.bounds.width - 15, height: 240))
+                .padding(.horizontal, 10)
+                
+                .padding(30)
                 HStack {
                     Button(action: {
                         locationManager.startUpdatingLocation()
@@ -44,10 +54,12 @@ struct ContentView: View {
                         Text("Start")
                             .font(.title)
                             .padding()
-                            .background(LinearGradient(gradient: Gradient(colors: [Color.black, Color.blue]), startPoint: .bottom, endPoint: .top))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                            .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
+                            .foregroundColor(colorScheme == .dark ? Color.white : Color.black)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(colorScheme == .dark ? Color.black : Color.white)
+                                    .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
+                            )
                     }
                     
                     Button(action: {
@@ -56,10 +68,12 @@ struct ContentView: View {
                         Text("Stop")
                             .font(.title)
                             .padding()
-                            .background(LinearGradient(gradient: Gradient(colors: [Color.black, Color.red]), startPoint: .bottom, endPoint: .top))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                            .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
+                            .foregroundColor(colorScheme == .dark ? Color.white : Color.black)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(colorScheme == .dark ? Color.black : Color.white)
+                                    .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
+                            )
                     }
                 }
                 .padding(.horizontal)
@@ -70,10 +84,33 @@ struct ContentView: View {
             }
             
             VStack {
-                List(historyStore.accelerationData) { data in
-                    VStack(alignment: .leading) {
-                        Text("Acceleration: \(data.acceleration, specifier: "%.\(displayPrecision)f") m/s²")
-                        Text("Timestamp: \(data.timestampString)")
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        isShowingShareSheet = true
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.title)
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.trailing)
+                    
+                    Button(action: {
+                        historyStore.clearAccelerationData()
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.title)
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.trailing)
+                }
+                
+                VStack {
+                    List(historyStore.accelerationData) { data in
+                        VStack(alignment: .leading) {
+                            Text("Acceleration: \(data.acceleration, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)")
+                            Text("Timestamp: \(data.timestampString)")
+                        }
                     }
                 }
             }
@@ -110,14 +147,17 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            locationManager.requestLocationAuthorization()
             locationManager.updateInterval = measurementInterval
         }
+        
         .onReceive(locationManager.$averageSpeed) { _ in
             DispatchQueue.main.async {
                 let acceleration = locationManager.acceleration
                 let timestamp = Date()
                 let newData = AccelerationData(acceleration: acceleration, timestamp: timestamp)
                 historyStore.accelerationData.append(newData)
+                accelerationData = historyStore.accelerationData
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
@@ -137,6 +177,26 @@ struct ContentView: View {
         }
         .onChange(of: displayPrecision) { newValue in
             UserDefaults.standard.set(newValue, forKey: "DisplayPrecision")
+        }
+        .sheet(isPresented: $isShowingShareSheet) {
+            ShareSheet(activityItems: [exportAccelerationData()])
+        }
+    }
+    
+    func exportAccelerationData() -> URL {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try! encoder.encode(historyStore.accelerationData)
+        
+        let fileManager = FileManager.default
+        let documentDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let fileURL = documentDirectory.appendingPathComponent("acceleration_data.json")
+        
+        do {
+            try data.write(to: fileURL)
+            return fileURL
+        } catch {
+            fatalError("Failed to write acceleration data to file: \(error.localizedDescription)")
         }
     }
 }
@@ -163,8 +223,11 @@ class HistoryStore: ObservableObject {
     init(accelerationData: [AccelerationData]) {
         self.accelerationData = accelerationData
     }
+    
+    func clearAccelerationData() {
+        accelerationData.removeAll()
+    }
 }
-
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
@@ -172,81 +235,83 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var averageSpeed: CLLocationSpeed = 0.0
     var updateInterval: Double = 1.0
     
-    private var previousSpeed: CLLocationSpeed?
-    private var previousTimestamp: Date?
-    private var totalDistance: CLLocationDistance = 0.0
-    private var startTime: Date?
-    
     override init() {
         super.init()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.pausesLocationUpdatesAutomatically = false
     }
     
     func startUpdatingLocation() {
-        locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
-        locationManager.pausesLocationUpdatesAutomatically = false
-        locationManager.allowsBackgroundLocationUpdates = true
-        locationManager.activityType = .automotiveNavigation
-        locationManager.distanceFilter = kCLDistanceFilterNone
-        locationManager.delegate = self
-        locationManager.startUpdatingLocation()
-        locationManager.startMonitoringSignificantLocationChanges()
-        locationManager.showsBackgroundLocationIndicator = true
+        acceleration = 0.0
     }
     
     func stopUpdatingLocation() {
         locationManager.stopUpdatingLocation()
-        locationManager.showsBackgroundLocationIndicator = false
     }
     
     func resetMeasurement() {
-        totalDistance = 0.0
-        startTime = Date()
         acceleration = 0.0
         averageSpeed = 0.0
-        previousSpeed = nil
-        previousTimestamp = nil
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
+        guard let lastLocation = locations.last else { return }
         
-        let currentSpeed = location.speed
-        let currentTimestamp = location.timestamp
+        let currentSpeed = lastLocation.speed
+        let acceleration = calculateAcceleration(from: currentSpeed)
         
-        if let previousSpeed = previousSpeed,
-           let previousTimestamp = previousTimestamp,
-           currentSpeed > 0.0,
-           currentTimestamp > previousTimestamp {
-            let timeDifference = currentTimestamp.timeIntervalSince(previousTimestamp)
-            let acceleration = (currentSpeed - previousSpeed) / timeDifference
-            self.acceleration = acceleration
-        }
-        
-        if let startTime = startTime {
-            let distance = location.distance(from: locations[0])
-            totalDistance += distance
-            
-            let elapsedTime = currentTimestamp.timeIntervalSince(startTime)
-            let averageSpeed = totalDistance / elapsedTime
-            self.averageSpeed = averageSpeed
-        }
-        
-        previousSpeed = currentSpeed
-        previousTimestamp = currentTimestamp
+        averageSpeed = currentSpeed
+        self.acceleration = acceleration
     }
+    
+    private func calculateAcceleration(from speed: CLLocationSpeed) -> Double {
+        let initialSpeed = 0.0
+        let targetSpeeds = [100.0, 200.0] // Скорости, до которых вы хотите измерить ускорение
+        let timeInterval = 10.0 // Временной интервал, в течение которого происходит измерение ускорения
+        
+        if speed >= initialSpeed && speed <= targetSpeeds[0] {
+            // Измерение ускорения от 0 до 100 км/ч
+            return (speed - initialSpeed) / timeInterval
+        } else if speed > targetSpeeds[0] && speed <= targetSpeeds[1] {
+            // Измерение ускорения от 100 до 200 км/ч
+            let accelerationRange = targetSpeeds[0] - initialSpeed
+            let timeRange = timeInterval / 2.0
+            return accelerationRange / timeRange
+        } else {
+            return 0.0
+        }
+    }
+    
+    func requestLocationAuthorization() {
+        locationManager.requestWhenInUseAuthorization()
+    }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
-            .environmentObject(HistoryStore(accelerationData: [
-                AccelerationData(acceleration: 2.5, timestamp: Date()),
-                AccelerationData(acceleration: 3.2, timestamp: Date().addingTimeInterval(-10)),
-                AccelerationData(acceleration: 1.8, timestamp: Date().addingTimeInterval(-20))
-            ]))
+        let historyStore = HistoryStore(accelerationData: []) // Pass an empty array as the argument
+        
+        historyStore.accelerationData = [
+            AccelerationData(acceleration: 2.5, timestamp: Date()),
+            AccelerationData(acceleration: 3.2, timestamp: Date()),
+            AccelerationData(acceleration: 1.8, timestamp: Date())
+        ]
+        
+        return ContentView().environmentObject(historyStore)
     }
 }
 
@@ -254,4 +319,11 @@ struct ContentView_Previews: PreviewProvider {
 
 
 
+
+//struct ContentView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ContentView()
+//            .environmentObject(HistoryStore())
+//    }
+//}
 
