@@ -42,7 +42,7 @@ struct ContentView: View {
                                                 textColor: Color.black,
                                                 legendTextColor: Color.gray,
                                                 dropShadowColor: Color.gray),
-                              form: CGSize(width: UIScreen.main.bounds.width - 15, height: 240))
+                              form: CGSize(width: UIScreen.main.bounds.width - 20, height: 240))
                 .padding(.horizontal, 10)
                 
                 .padding(30)
