@@ -2,7 +2,7 @@
 //  exportData.swift
 //  CarSpeedTest
 //
-//  Created by Dokx Dig on 31.05.23.
+//  Created by Akhmed on 31.05.23.
 //
 
 

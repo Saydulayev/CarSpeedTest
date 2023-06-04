@@ -2,7 +2,7 @@
 //  CarSpeedTestApp.swift
 //  CarSpeedTest
 //
-//  Created by Dokx Dig on 30.05.23.
+//  Created by Akhmed on 30.05.23.
 //
 
 import SwiftUI
