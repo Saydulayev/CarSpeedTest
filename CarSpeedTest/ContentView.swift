@@ -11,7 +11,6 @@ import SwiftUICharts
 
 struct ContentView: View {
     @EnvironmentObject var historyStore: HistoryStore // Use the injected HistoryStore
-    
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var locationManager = LocationManager()
     @State private var accelerationData: [AccelerationData] = []
@@ -19,6 +18,7 @@ struct ContentView: View {
     @State private var measurementInterval = UserDefaults.standard.double(forKey: "MeasurementInterval")
     @State private var displayPrecision = UserDefaults.standard.integer(forKey: "DisplayPrecision")
     @State private var isShowingShareSheet = false
+    
     
     private let speedUnits: [String] = ["km/h", "mph"]
     
@@ -232,16 +232,18 @@ class HistoryStore: ObservableObject {
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
     @Published var acceleration: Double = 0.0
-    @Published var averageSpeed: CLLocationSpeed = 0.0
+    @Published var averageSpeed: CLLocationAccuracy = 0.0
+
     var updateInterval: Double = 1.0
     
     override init() {
-        super.init()
-        locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.allowsBackgroundLocationUpdates = true
-        locationManager.pausesLocationUpdatesAutomatically = false
-    }
+            super.init()
+            locationManager.delegate = self
+            locationManager.desiredAccuracy = kCLLocationAccuracyBest
+            locationManager.distanceFilter = 1.0
+            locationManager.allowsBackgroundLocationUpdates = true
+            locationManager.pausesLocationUpdatesAutomatically = false
+        }
     
     func startUpdatingLocation() {
         locationManager.startUpdatingLocation()
@@ -260,30 +262,32 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let lastLocation = locations.last else { return }
         
-        let currentSpeed = lastLocation.speed
+        let currentSpeed: CLLocationSpeed = lastLocation.speed
         let acceleration = calculateAcceleration(from: currentSpeed)
         
-        averageSpeed = currentSpeed
+        averageSpeed = CLLocationAccuracy(currentSpeed)
         self.acceleration = acceleration
     }
+
     
     private func calculateAcceleration(from speed: CLLocationSpeed) -> Double {
         let initialSpeed = 0.0
-        let targetSpeeds = [100.0, 200.0] // Скорости, до которых вы хотите измерить ускорение
-        let timeInterval = 10.0 // Временной интервал, в течение которого происходит измерение ускорения
+        let targetSpeeds = [100.0, 200.0] 
+        let timeInterval = 30.0 // Временной интервал, в течение которого происходит измерение ускорения
         
         if speed >= initialSpeed && speed <= targetSpeeds[0] {
             // Измерение ускорения от 0 до 100 км/ч
             return (speed - initialSpeed) / timeInterval
         } else if speed > targetSpeeds[0] && speed <= targetSpeeds[1] {
-            // Измерение ускорения от 100 до 200 км/ч
-            let accelerationRange = targetSpeeds[0] - initialSpeed
-            let timeRange = timeInterval / 2.0
+            // Измерение ускорения от 0 до 200 км/ч
+            let accelerationRange = targetSpeeds[1] - initialSpeed
+            let timeRange = timeInterval
             return accelerationRange / timeRange
         } else {
             return 0.0
         }
     }
+
     
     func requestLocationAuthorization() {
         locationManager.requestWhenInUseAuthorization()
