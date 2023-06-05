@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9942A4B1CF6593075F5BA1C9 /* Pods_CarSpeedTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 382504B52FC28B3BFD8A36D1 /* Pods_CarSpeedTest.framework */; };
 		C069837C2A275E5000546A49 /* exportData.swift in Sources */ = {isa = PBXBuildFile; fileRef = C069837B2A275E5000546A49 /* exportData.swift */; };
 		C0713F182A261E5600B87B06 /* CarSpeedTestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0713F172A261E5600B87B06 /* CarSpeedTestApp.swift */; };
 		C0713F1A2A261E5600B87B06 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0713F192A261E5600B87B06 /* ContentView.swift */; };
@@ -17,9 +18,12 @@
 		C09979FA2A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.40.png in Resources */ = {isa = PBXBuildFile; fileRef = C09979F62A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.40.png */; };
 		C09979FB2A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.26.png in Resources */ = {isa = PBXBuildFile; fileRef = C09979F72A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.26.png */; };
 		C09979FC2A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.54.png in Resources */ = {isa = PBXBuildFile; fileRef = C09979F82A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.54.png */; };
+		C0E70F042A2D0393001E6733 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C0E70F032A2D0393001E6733 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		382504B52FC28B3BFD8A36D1 /* Pods_CarSpeedTest.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CarSpeedTest.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		76AE3F09F3B4B65A17285F3A /* Pods-CarSpeedTest.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CarSpeedTest.release.xcconfig"; path = "Target Support Files/Pods-CarSpeedTest/Pods-CarSpeedTest.release.xcconfig"; sourceTree = "<group>"; };
 		C069837A2A2754F700546A49 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C069837B2A275E5000546A49 /* exportData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = exportData.swift; sourceTree = "<group>"; };
 		C0713F142A261E5600B87B06 /* CarSpeedTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CarSpeedTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -31,6 +35,8 @@
 		C09979F62A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.40.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.40.png"; sourceTree = "<group>"; };
 		C09979F72A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.26.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.26.png"; sourceTree = "<group>"; };
 		C09979F82A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.54.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.54.png"; sourceTree = "<group>"; };
+		C0E70F032A2D0393001E6733 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		DB3D3A599A4F713991DB40A0 /* Pods-CarSpeedTest.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CarSpeedTest.debug.xcconfig"; path = "Target Support Files/Pods-CarSpeedTest/Pods-CarSpeedTest.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,17 +45,37 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0713F272A261E7D00B87B06 /* SwiftUICharts in Frameworks */,
+				9942A4B1CF6593075F5BA1C9 /* Pods_CarSpeedTest.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		249BA9CCE5A3941A8A64DCB5 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				DB3D3A599A4F713991DB40A0 /* Pods-CarSpeedTest.debug.xcconfig */,
+				76AE3F09F3B4B65A17285F3A /* Pods-CarSpeedTest.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		46DE4A67240391BB5ADAD890 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				382504B52FC28B3BFD8A36D1 /* Pods_CarSpeedTest.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		C0713F0B2A261E5600B87B06 = {
 			isa = PBXGroup;
 			children = (
 				C0713F162A261E5600B87B06 /* CarSpeedTest */,
 				C0713F152A261E5600B87B06 /* Products */,
+				249BA9CCE5A3941A8A64DCB5 /* Pods */,
+				46DE4A67240391BB5ADAD890 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -65,6 +91,7 @@
 			isa = PBXGroup;
 			children = (
 				C069837A2A2754F700546A49 /* Info.plist */,
+				C0E70F032A2D0393001E6733 /* GoogleService-Info.plist */,
 				C0713F172A261E5600B87B06 /* CarSpeedTestApp.swift */,
 				C0713F192A261E5600B87B06 /* ContentView.swift */,
 				C069837B2A275E5000546A49 /* exportData.swift */,
@@ -101,9 +128,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = C0713F222A261E5700B87B06 /* Build configuration list for PBXNativeTarget "CarSpeedTest" */;
 			buildPhases = (
+				5739F72358731629003E6FF5 /* [CP] Check Pods Manifest.lock */,
 				C0713F102A261E5600B87B06 /* Sources */,
 				C0713F112A261E5600B87B06 /* Frameworks */,
 				C0713F122A261E5600B87B06 /* Resources */,
+				D9E48AC8661CA2F3B7D750D3 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -164,10 +193,53 @@
 				C09979FA2A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.40.png in Resources */,
 				C09979F92A2CB505008FB694 /* Снимок экрана 2023-06-04 в 13.52.41.png in Resources */,
 				C09979FC2A2CB505008FB694 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-04 at 13.58.54.png in Resources */,
+				C0E70F042A2D0393001E6733 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5739F72358731629003E6FF5 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-CarSpeedTest-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D9E48AC8661CA2F3B7D750D3 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CarSpeedTest/Pods-CarSpeedTest-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-CarSpeedTest/Pods-CarSpeedTest-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-CarSpeedTest/Pods-CarSpeedTest-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C0713F102A261E5600B87B06 /* Sources */ = {
@@ -299,6 +371,7 @@
 		};
 		C0713F232A261E5700B87B06 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = DB3D3A599A4F713991DB40A0 /* Pods-CarSpeedTest.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -330,6 +403,7 @@
 		};
 		C0713F242A261E5700B87B06 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 76AE3F09F3B4B65A17285F3A /* Pods-CarSpeedTest.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

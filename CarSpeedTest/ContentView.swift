@@ -8,6 +8,11 @@
 import SwiftUI
 import CoreLocation
 import SwiftUICharts
+import UIKit
+import Firebase
+import FirebaseAuth
+import FirebaseCore
+
 
 struct ContentView: View {
     @EnvironmentObject var historyStore: HistoryStore // Use the injected HistoryStore
@@ -18,6 +23,8 @@ struct ContentView: View {
     @State private var measurementInterval = UserDefaults.standard.double(forKey: "MeasurementInterval")
     @State private var displayPrecision = UserDefaults.standard.integer(forKey: "DisplayPrecision")
     @State private var isShowingShareSheet = false
+    @State private var loggedIn: Bool = false
+
     
     
     private let speedUnits: [String] = ["km/h", "mph"]
@@ -118,6 +125,10 @@ struct ContentView: View {
                 Image(systemName: "clock")
                 Text("History")
             }
+            AuthenticationView(loggedIn: $loggedIn)
+                .tabItem {
+                    Label("Authentication", systemImage: "person.crop.circle.badge.plus")
+                }
             
             Form {
                 Section(header: Text("Measurement Interval")) {
@@ -201,6 +212,114 @@ struct ContentView: View {
     }
 }
 
+struct AuthenticationView: View {
+    @Binding var loggedIn: Bool
+    @State private var email: String = ""
+    @State private var password: String = ""
+    @State private var confirmPassword: String = ""
+    @State private var showPassword: Bool = false
+    @State private var error: String = ""
+    @State private var registrationMode: Bool = true
+    
+    var body: some View {
+        VStack {
+            TextField("Email", text: $email)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            SecureField("Password", text: $password)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            if registrationMode {
+                SecureField("Confirm Password", text: $confirmPassword)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding()
+            }
+            
+            HStack {
+                if registrationMode {
+                    Button(action: register) {
+                        Text("Register")
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .cornerRadius(8)
+                    }
+                    .padding(.vertical, 10)
+                } else {
+                    Button(action: login) {
+                        Text("Login")
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .cornerRadius(8)
+                    }
+                    .padding(.vertical, 10)
+                }
+            }
+            
+            Button(action: {
+                registrationMode.toggle()
+            }) {
+                Text(registrationMode ? "Switch to Login" : "Switch to Registration")
+            }
+            .padding(.vertical, 10)
+            
+            if !error.isEmpty {
+                Text(error)
+                    .foregroundColor(.red)
+                    .padding(.top, 10)
+            }
+            
+            if loggedIn {
+                Text("Logged in successfully!")
+                    .foregroundColor(.green)
+                    .padding()
+            }
+        }
+        .padding()
+    }
+    
+    private func register() {
+        if password == confirmPassword {
+            Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+                if let error = error {
+                    self.error = "Error registering user: \(error.localizedDescription)"
+                } else {
+                    authResult?.user.sendEmailVerification(completion: { error in
+                        if let error = error {
+                            self.error = "Error sending email verification: \(error.localizedDescription)"
+                        } else {
+                            print("Email verification sent")
+                        }
+                    })
+                    loggedIn = true
+                }
+            }
+        } else {
+            self.error = "Passwords do not match"
+        }
+    }
+    
+    private func login() {
+        Auth.auth().signIn(withEmail: email, password: password) { authResult, error in
+            if let error = error {
+                self.error = "Error logging in: \(error.localizedDescription)"
+            } else {
+                print("Logged in")
+                loggedIn = true
+            }
+        }
+    }
+}
+
+
+
+
+
 struct AccelerationData: Identifiable, Codable, Equatable {
     var id = UUID()
     let acceleration: Double
@@ -217,6 +336,17 @@ struct AccelerationData: Identifiable, Codable, Equatable {
     }
 }
 
+class AppDelegate: NSObject, UIApplicationDelegate {
+  func application(_ application: UIApplication,
+                   didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    FirebaseApp.configure()
+
+    return true
+  }
+}
+
+
+
 class HistoryStore: ObservableObject {
     @Published var accelerationData: [AccelerationData]
     
@@ -228,6 +358,188 @@ class HistoryStore: ObservableObject {
         accelerationData.removeAll()
     }
 }
+
+
+
+struct RegistrationView: View {
+    @State private var email: String = ""
+    @State private var password: String = ""
+    @State private var confirmPassword: String = ""
+    
+    var body: some View {
+        VStack {
+            TextField("Email", text: $email)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            SecureField("Password", text: $password)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            SecureField("Confirm Password", text: $confirmPassword)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            Button("Register") {
+                // Perform registration logic here
+            }
+            .padding()
+        }
+        .padding()
+    }
+}
+
+struct LoginView: View {
+    @State private var email: String = ""
+    @State private var password: String = ""
+    
+    var body: some View {
+        VStack {
+            TextField("Email", text: $email)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            SecureField("Password", text: $password)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            Button("Login") {
+                // Perform login logic here
+            }
+            .padding()
+        }
+        .padding()
+    }
+}
+
+
+struct HistoryItem {
+    let date: Date
+    let speed: Double
+    // Добавьте другие свойства по необходимости
+}
+
+class HistoryViewController: UIViewController {
+
+    @IBOutlet private weak var emailTextField: UITextField!
+    @IBOutlet private weak var passwordTextField: UITextField!
+    @IBOutlet private weak var loginButton: UIButton!
+    @IBOutlet private weak var registerButton: UIButton!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupNavigationBar()
+        FirebaseApp.configure()
+    }
+    
+    private func setupNavigationBar() {
+        let navigationBar = UINavigationBar(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 44))
+        navigationBar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(navigationBar)
+        
+        let navigationItem = UINavigationItem(title: "История")
+        navigationBar.setItems([navigationItem], animated: false)
+    }
+    
+    @IBAction private func loginButtonTapped(_ sender: UIButton) {
+        guard let email = emailTextField.text,
+              let password = passwordTextField.text else {
+            return
+        }
+        
+        Auth.auth().signIn(withEmail: email, password: password) { [weak self] result, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.showAlert(title: "Error", message: error.localizedDescription)
+            } else {
+                self.fetchHistory()
+            }
+        }
+    }
+    
+    @IBAction private func registerButtonTapped(_ sender: UIButton) {
+        guard let email = emailTextField.text,
+              let password = passwordTextField.text else {
+            return
+        }
+        
+        Auth.auth().createUser(withEmail: email, password: password) { [weak self] result, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.showAlert(title: "Error", message: error.localizedDescription)
+            } else {
+                self.fetchHistory()
+            }
+        }
+    }
+    
+    private func saveHistoryItem(_ item: HistoryItem) {
+        guard let currentUserID = Auth.auth().currentUser?.uid else {
+            return
+        }
+        
+        let historyRef = Database.database().reference().child("history").child(currentUserID)
+        let itemRef = historyRef.childByAutoId()
+        
+        let itemData: [String: Any] = [
+            "date": item.date.timeIntervalSince1970,
+            "speed": item.speed
+            // Добавьте другие свойства по необходимости
+        ]
+        
+        itemRef.setValue(itemData) { error, _ in
+            if let error = error {
+                print("Failed to save history item: \(error.localizedDescription)")
+            } else {
+                print("History item saved successfully")
+            }
+        }
+    }
+    
+    private func fetchHistory() {
+        guard let currentUserID = Auth.auth().currentUser?.uid else {
+            return
+        }
+        
+        let historyRef = Database.database().reference().child("history").child(currentUserID)
+        
+        historyRef.observeSingleEvent(of: .value) { snapshot in
+            guard let historySnapshot = snapshot.children.allObjects as? [DataSnapshot] else {
+                return
+            }
+            
+            let historyItems = historySnapshot.compactMap { snapshot -> HistoryItem? in
+                guard let itemData = snapshot.value as? [String: Any],
+                      let dateTimestamp = itemData["date"] as? TimeInterval,
+                      let speed = itemData["speed"] as? Double
+                else {
+                    return nil
+                }
+                
+                let date = Date(timeIntervalSince1970: dateTimestamp)
+                return HistoryItem(date: date, speed: speed)
+            }
+            
+            print("Fetched \(historyItems.count) history items")
+            // Делайте необходимые операции с полученными элементами истории
+        }
+    }
+    
+    private func showAlert(title: String, message: String) {
+        let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+        alertController.addAction(okAction)
+        present(alertController, animated: true, completion: nil)
+    }
+}
+
+
+
+
+
+
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
@@ -272,14 +584,14 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     private func calculateAcceleration(from speed: CLLocationSpeed) -> Double {
         let initialSpeed = 0.0
-        let targetSpeeds = [100.0, 200.0] 
-        let timeInterval = 30.0 // Временной интервал, в течение которого происходит измерение ускорения
+        let targetSpeeds = [100.0, 200.0]
+        let timeInterval = 30.0 // Time interval during which the results are measured
         
         if speed >= initialSpeed && speed <= targetSpeeds[0] {
-            // Измерение ускорения от 0 до 100 км/ч
+            // Measurement of acceleration from 0 to 100 km/h
             return (speed - initialSpeed) / timeInterval
         } else if speed > targetSpeeds[0] && speed <= targetSpeeds[1] {
-            // Измерение ускорения от 0 до 200 км/ч
+            // Measurement of acceleration from 0 to 200 km/h
             let accelerationRange = targetSpeeds[1] - initialSpeed
             let timeRange = timeInterval
             return accelerationRange / timeRange

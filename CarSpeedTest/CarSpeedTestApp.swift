@@ -7,11 +7,15 @@
 
 import SwiftUI
 import CoreLocation
+import Firebase
+
 
 @main
 struct AccelerationApp: App {
     @StateObject private var historyStore = HistoryStore(accelerationData: [])
-    
+    init() {
+            FirebaseApp.configure() // Configure Firebase here
+        }
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -31,21 +35,19 @@ struct AccelerationApp: App {
 //}
 
 
-//@MainActor
-//class SettingsManager: ObservableObject {
-//    @Published var settings = Settings()
-//}
-//
 //@main
-//struct CarSpeedTestApp: App {
-//    @StateObject private var settingsManager = SettingsManager()
+//struct YourApp: App {
+//  // register app delegate for Firebase setup
+//  @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 //
-//    var body: some Scene {
-//        WindowGroup {
-//            ContentView()
-//                .environmentObject(settingsManager)
-//        }
+//
+//  var body: some Scene {
+//    WindowGroup {
+//      NavigationView {
+//        ContentView()
+//      }
 //    }
+//  }
 //}
 
 
