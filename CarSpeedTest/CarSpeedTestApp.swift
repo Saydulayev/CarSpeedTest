@@ -6,23 +6,45 @@
 //
 
 import SwiftUI
-import CoreLocation
-import Firebase
+import FirebaseCore
+import FirebaseAuth
 
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+  func application(_ application: UIApplication,
+                   didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    FirebaseApp.configure()
+
+    return true
+  }
+}
 
 @main
 struct AccelerationApp: App {
-    @StateObject private var historyStore = HistoryStore(accelerationData: [])
-    init() {
-            FirebaseApp.configure() // Configure Firebase here
-        }
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .environmentObject(historyStore)
-        }
+  // register app delegate for Firebase setup
+  @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
+
+  var body: some Scene {
+    WindowGroup {
+      NavigationView {
+        ContentView()
+      }
     }
+  }
 }
+
+//@main
+//struct AccelerationApp: App {
+//    @StateObject private var historyStore = HistoryStore(accelerationData: [])
+//   
+//    var body: some Scene {
+//        WindowGroup {
+//            ContentView()
+//                .environmentObject(historyStore)
+//        }
+//    }
+//}
 
 
 //@main
