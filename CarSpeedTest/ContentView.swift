@@ -96,6 +96,12 @@ struct ContentView: View {
                 Text("Speed")
             }
             
+            AccelerationHistoryView()
+                    .tabItem {
+                        Image(systemName: "clock")
+                        Text("History")
+                    }
+            
             AuthView()
                             .tabItem {
                                 Image(systemName: "person.fill")
@@ -197,6 +203,23 @@ struct ContentView: View {
     }
 }
 
+struct AccelerationHistoryView: View {
+    @ObservedObject var accelerationDataManager = AccelerationDataManager()
+
+    var body: some View {
+        VStack {
+            List(accelerationDataManager.accelerationData) { acceleration in
+                Text("Acceleration: \(acceleration.acceleration, specifier: "%.2f")")
+                Text("Timestamp: \(acceleration.timestampString)")
+            }
+        }
+        .onAppear {
+            accelerationDataManager.loadAccelerationData()
+        }
+    }
+}
+
+
 struct AuthView: View {
     @State private var email: String = ""
     @State private var password: String = ""
@@ -277,14 +300,64 @@ struct AuthView: View {
     }
     
     func loadAccelerationData() {
+            guard let user = Auth.auth().currentUser else {
+                return
+            }
+            
+            let userId = user.uid
+            let ref = Database.database().reference(withPath: "acceleration").child(userId)
+            
+            ref.observe(.value) { snapshot in
+                var data: [AccelerationData] = []
+                
+                for child in snapshot.children {
+                    if let childSnapshot = child as? DataSnapshot,
+                       let value = childSnapshot.value as? [String: Any],
+                       let acceleration = value["acceleration"] as? Double,
+                       let timestamp = value["timestamp"] as? TimeInterval {
+                        let accelerationData = AccelerationData(acceleration: acceleration, timestamp: Date(timeIntervalSince1970: timestamp))
+                        data.append(accelerationData)
+                    }
+                }
+                
+                DispatchQueue.main.async {
+                    self.accelerationData = data
+                }
+            }
+        }
+
+}
+
+
+struct AccelerationData: Identifiable {
+    var id = UUID()
+    let acceleration: Double
+    let timestamp: Date
+    
+    var timestampString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, HH:mm:ss"
+        return formatter.string(from: timestamp)
+    }
+}
+
+class AccelerationDataManager: ObservableObject {
+    @Published var accelerationData: [AccelerationData] = []
+
+    func loadAccelerationData() {
+        // Замените "userId" на вашу переменную или значение, представляющее идентификатор пользователя
         guard let user = Auth.auth().currentUser else {
             return
         }
-        
+
         let userId = user.uid
-        let ref = Database.database().reference(withPath: "acceleration").child(userId)
+        print("User ID: \(userId)")
+
+
+        let database = Database.database().reference()
+        let userAccelerationRef = database.child("acceleration").child(userId)
         
-        ref.observe(.value) { snapshot in
+        userAccelerationRef.observe(.value) { snapshot in
             var data: [AccelerationData] = []
             
             for child in snapshot.children {
@@ -302,21 +375,8 @@ struct AuthView: View {
             }
         }
     }
-
 }
 
-
-struct AccelerationData: Identifiable {
-    var id = UUID()
-    let acceleration: Double
-    let timestamp: Date
-    
-    var timestampString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, HH:mm:ss"
-        return formatter.string(from: timestamp)
-    }
-}
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
