@@ -5,23 +5,26 @@
 //  Created by Akhmed on 30.05.23.
 //
 
+
 import SwiftUI
 import CoreLocation
 import CoreMotion
 import SwiftUICharts
-import FirebaseCore
+import Firebase
 import FirebaseAuth
-import FirebaseFirestore
-import FirebaseAnalytics
+import FirebaseDatabase
 
 
 struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var locationManager = LocationManager()
     @State private var accelerationData: [AccelerationData] = []
-    @AppStorage("SelectedUnitIndex") private var selectedUnitIndex = 0 // Use AppStorage to observe and store the selected unit index
+    @AppStorage("SelectedUnitIndex") private var selectedUnitIndex = 0
     @State private var measurementInterval = UserDefaults.standard.double(forKey: "MeasurementInterval")
     @State private var displayPrecision = UserDefaults.standard.integer(forKey: "DisplayPrecision")
+    
+    @State private var timeTo100: TimeInterval = 0.0
+    @State private var timeTo200: TimeInterval = 0.0
     
     private let speedUnits: [String] = ["km/h", "mph"]
     
@@ -32,9 +35,15 @@ struct ContentView: View {
     var body: some View {
         TabView {
             VStack {
-                Text("Acceleration: \(locationManager.acceleration, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)") // Use currentSpeedUnit to display the current speed unit
-                    .font(.title)
-                    .padding()
+                if Auth.auth().currentUser != nil {
+                    Text("Time to 100 km/h: \(timeTo100, specifier: "%.1f") seconds")
+                    Text("Time to 200 km/h: \(timeTo200, specifier: "%.1f") seconds")
+                    Text("Acceleration: \(locationManager.acceleration, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)") // Use currentSpeedUnit to display the current speed unit
+                        .font(.title)
+                        .padding()
+                } else {
+                    Text("Please sign in to view the data")
+                }
                 
                 LineChartView(data: accelerationData.map(\.acceleration),
                               title: "Acceleration Speed",
@@ -47,8 +56,8 @@ struct ContentView: View {
                                                 dropShadowColor: Color.gray),
                               form: CGSize(width: UIScreen.main.bounds.width - 20, height: 240))
                     .padding(.horizontal, 10)
+                    .padding(30)
                 
-                .padding(30)
                 HStack {
                     Button(action: {
                         locationManager.startUpdatingLocation()
@@ -87,6 +96,12 @@ struct ContentView: View {
                 Text("Speed")
             }
             
+            AuthView()
+                            .tabItem {
+                                Image(systemName: "person.fill")
+                                Text("Account")
+                            }
+            
             Form {
                 Section(header: Text("Measurement Interval")) {
                     Slider(value: $measurementInterval, in: 0...5, step: 0.1) {
@@ -108,6 +123,11 @@ struct ContentView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                 }
+                
+                Section(header: Text("Time to Reach Speed")) {
+                    Text("Time to 100 km/h: \(timeTo100, specifier: "%.1f") seconds")
+                    Text("Time to 200 km/h: \(timeTo200, specifier: "%.1f") seconds")
+                }
             }
             .tabItem {
                 Image(systemName: "gear")
@@ -115,16 +135,23 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            setupFirebase()
             locationManager.requestLocationAuthorization()
             locationManager.updateInterval = measurementInterval
         }
-        
-        .onReceive(locationManager.$averageSpeed) { _ in
+        .onReceive(locationManager.$averageSpeed) { averageSpeed in
             DispatchQueue.main.async {
-                let acceleration = locationManager.acceleration
                 let timestamp = Date()
-                let newData = AccelerationData(acceleration: acceleration, timestamp: timestamp)
-                accelerationData.append(newData)
+                
+                if timeTo100 == 0.0 && averageSpeed >= 100.0 {
+                    timeTo100 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
+                }
+                
+                if timeTo200 == 0.0 && averageSpeed >= 200.0 {
+                    timeTo200 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
+                }
+                
+                saveAccelerationData(acceleration: averageSpeed, timestamp: timestamp)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
@@ -148,7 +175,136 @@ struct ContentView: View {
             UserDefaults.standard.set(newValue, forKey: "DisplayPrecision")
         }
     }
+    
+    func setupFirebase() {
+            if FirebaseApp.app() == nil {
+                FirebaseApp.configure()
+            }
+        }
+    
+    func saveAccelerationData(acceleration: Double, timestamp: Date) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let database = Database.database().reference()
+        let userAccelerationRef = database.child("acceleration").child(userId).childByAutoId()
+        
+        let data: [String: Any] = [
+            "acceleration": acceleration,
+            "timestamp": timestamp.timeIntervalSince1970
+        ]
+        
+        userAccelerationRef.setValue(data)
+    }
 }
+
+struct AuthView: View {
+    @State private var email: String = ""
+    @State private var password: String = ""
+    @State private var isSignIn = true
+    @State private var isShowingAlert = false
+    @State private var alertMessage = ""
+    @State private var isLoggedIn = false // Track the login status
+    @State private var accelerationData: [AccelerationData] = []
+    var body: some View {
+        if isLoggedIn {
+            Text("Welcome, \(Auth.auth().currentUser?.email ?? "")!")
+                .font(.title)
+                .padding()
+                .onAppear {
+                    loadAccelerationData()
+                }
+        } else {
+            VStack {
+                Text(isSignIn ? "Sign In" : "Sign Up")
+                    .font(.title)
+                    .padding()
+                
+                TextField("Email", text: $email)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+                
+                SecureField("Password", text: $password)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+                
+                Button(action: {
+                    isSignIn ? signIn() : signUp()
+                }) {
+                    Text(isSignIn ? "Sign In" : "Sign Up")
+                        .font(.headline)
+                        .padding()
+                        .foregroundColor(Color.white)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.blue)
+                        )
+                }
+                .padding()
+                
+                Text(isSignIn ? "Don't have an account? Sign up" : "Already have an account? Sign in")
+                    .foregroundColor(.blue)
+                    .onTapGesture {
+                        isSignIn.toggle()
+                    }
+            }
+            .padding()
+            .alert(isPresented: $isShowingAlert) {
+                Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+            }
+        }
+    }
+    
+    func signIn() {
+        Auth.auth().signIn(withEmail: email, password: password) { result, error in
+            if let error = error {
+                alertMessage = error.localizedDescription
+                isShowingAlert = true
+            } else {
+                isLoggedIn = true
+            }
+        }
+    }
+    
+    func signUp() {
+        Auth.auth().createUser(withEmail: email, password: password) { result, error in
+            if let error = error {
+                alertMessage = error.localizedDescription
+                isShowingAlert = true
+            } else {
+                isLoggedIn = true
+            }
+        }
+    }
+    
+    func loadAccelerationData() {
+        guard let user = Auth.auth().currentUser else {
+            return
+        }
+        
+        let userId = user.uid
+        let ref = Database.database().reference(withPath: "acceleration").child(userId)
+        
+        ref.observe(.value) { snapshot in
+            var data: [AccelerationData] = []
+            
+            for child in snapshot.children {
+                if let childSnapshot = child as? DataSnapshot,
+                   let value = childSnapshot.value as? [String: Any],
+                   let acceleration = value["acceleration"] as? Double,
+                   let timestamp = value["timestamp"] as? TimeInterval {
+                    let accelerationData = AccelerationData(acceleration: acceleration, timestamp: Date(timeIntervalSince1970: timestamp))
+                    data.append(accelerationData)
+                }
+            }
+            
+            DispatchQueue.main.async {
+                self.accelerationData = data
+            }
+        }
+    }
+
+}
+
 
 struct AccelerationData: Identifiable {
     var id = UUID()
@@ -164,68 +320,63 @@ struct AccelerationData: Identifiable {
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
+    private let motionManager = CMMotionManager()
+    private var timer: Timer?
+    
     @Published var acceleration: Double = 0.0
-    @Published var averageSpeed: CLLocationSpeed = 0.0
+    @Published var averageSpeed: Double = 0.0
+    @Published var location: CLLocation?
+    
     var updateInterval: Double = 1.0
-    private var motionManager: CMMotionManager?
     
     override init() {
         super.init()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.allowsBackgroundLocationUpdates = true
-        locationManager.pausesLocationUpdatesAutomatically = false
-    }
-    
-    func startUpdatingLocation() {
-        locationManager.startUpdatingLocation()
-        acceleration = 0.0
-    }
-    
-    func stopUpdatingLocation() {
-        locationManager.stopUpdatingLocation()
-    }
-    
-    func startUpdatingMotion() {
-        motionManager = CMMotionManager()
-        motionManager?.accelerometerUpdateInterval = updateInterval
-        
-        guard let motionManager = motionManager else { return }
-        
-        motionManager.startAccelerometerUpdates(to: .main) { [weak self] (data, error) in
-            guard let accelerationData = data?.acceleration else { return }
-            
-            let acceleration = sqrt(pow(accelerationData.x, 2) + pow(accelerationData.y, 2) + pow(accelerationData.z, 2))
-            self?.acceleration = acceleration
-        }
-    }
-    
-    func stopUpdatingMotion() {
-        motionManager?.stopAccelerometerUpdates()
-        motionManager = nil
-    }
-    
-    func resetMeasurement() {
-        acceleration = 0.0
-        averageSpeed = 0.0
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let lastLocation = locations.last else { return }
-        
-        let currentSpeed = lastLocation.speed
-        averageSpeed = currentSpeed >= 0 ? currentSpeed : averageSpeed
-    }
-    
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        if manager.authorizationStatus == .authorizedAlways ||
-            manager.authorizationStatus == .authorizedWhenInUse {
-            startUpdatingLocation()
-        }
     }
     
     func requestLocationAuthorization() {
         locationManager.requestWhenInUseAuthorization()
+    }
+    
+    func startUpdatingLocation() {
+        locationManager.startUpdatingLocation()
+        startUpdatingMotion()
+    }
+    
+    func stopUpdatingLocation() {
+        locationManager.stopUpdatingLocation()
+        stopUpdatingMotion()
+    }
+    
+    func startUpdatingMotion() {
+        motionManager.startAccelerometerUpdates()
+        timer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
+            self?.processMotionData()
+        }
+    }
+    
+    func stopUpdatingMotion() {
+        motionManager.stopAccelerometerUpdates()
+        timer?.invalidate()
+        timer = nil
+    }
+    
+    private func processMotionData() {
+        guard let accelerometerData = motionManager.accelerometerData else { return }
+        
+        let acceleration = sqrt(pow(accelerometerData.acceleration.x, 2) + pow(accelerometerData.acceleration.y, 2) + pow(accelerometerData.acceleration.z, 2))
+        self.acceleration = acceleration
+        
+        guard let location = location else { return }
+        
+        averageSpeed = location.speed
+    }
+
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        
+        self.location = location
     }
 }
 
@@ -234,6 +385,9 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+
+
+
 
 
 

@@ -6,33 +6,35 @@
 //
 
 import SwiftUI
+import Firebase
 import FirebaseCore
-import FirebaseAuth
-
+import FirebaseDatabase
 
 class AppDelegate: NSObject, UIApplicationDelegate {
-  func application(_ application: UIApplication,
-                   didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-    FirebaseApp.configure()
-
-    return true
-  }
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
+        return true
+    }
 }
 
 @main
-struct AccelerationApp: App {
-  // register app delegate for Firebase setup
-  @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
-
-
-  var body: some Scene {
-    WindowGroup {
-      NavigationView {
-        ContentView()
-      }
+struct CarSpeedTestApp: App {
+    init() {
+        FirebaseApp.configure() // Configure Firebase only once in the initializer
     }
-  }
+    
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
 }
+
+
+
 
 //@main
 //struct AccelerationApp: App {
