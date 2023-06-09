@@ -14,7 +14,6 @@ import Firebase
 import FirebaseAuth
 import FirebaseDatabase
 
-
 struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var locationManager = LocationManager()
@@ -73,7 +72,7 @@ struct ContentView: View {
                                     .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
                             )
                     }
-                    
+                    .padding()
                     Button(action: {
                         locationManager.stopUpdatingLocation()
                         locationManager.stopUpdatingMotion()
@@ -88,6 +87,7 @@ struct ContentView: View {
                                     .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
                             )
                     }
+                    .padding()
                 }
                 .padding(.horizontal)
             }
@@ -97,16 +97,16 @@ struct ContentView: View {
             }
             
             AccelerationHistoryView()
-                    .tabItem {
-                        Image(systemName: "clock")
-                        Text("History")
-                    }
+                .tabItem {
+                    Image(systemName: "clock")
+                    Text("History")
+                }
             
             AuthView()
-                            .tabItem {
-                                Image(systemName: "person.fill")
-                                Text("Account")
-                            }
+                .tabItem {
+                    Image(systemName: "person.fill")
+                    Text("Account")
+                }
             
             Form {
                 Section(header: Text("Measurement Interval")) {
@@ -129,11 +129,6 @@ struct ContentView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                 }
-                
-                Section(header: Text("Time to Reach Speed")) {
-                    Text("Time to 100 km/h: \(timeTo100, specifier: "%.1f") seconds")
-                    Text("Time to 200 km/h: \(timeTo200, specifier: "%.1f") seconds")
-                }
             }
             .tabItem {
                 Image(systemName: "gear")
@@ -141,7 +136,6 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            setupFirebase()
             locationManager.requestLocationAuthorization()
             locationManager.updateInterval = measurementInterval
         }
@@ -182,12 +176,6 @@ struct ContentView: View {
         }
     }
     
-    func setupFirebase() {
-            if FirebaseApp.app() == nil {
-                FirebaseApp.configure()
-            }
-        }
-    
     func saveAccelerationData(acceleration: Double, timestamp: Date) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
@@ -205,13 +193,26 @@ struct ContentView: View {
 
 struct AccelerationHistoryView: View {
     @ObservedObject var accelerationDataManager = AccelerationDataManager()
-
+    
     var body: some View {
         VStack {
             List(accelerationDataManager.accelerationData) { acceleration in
                 Text("Acceleration: \(acceleration.acceleration, specifier: "%.2f")")
                 Text("Timestamp: \(acceleration.timestampString)")
             }
+            Button(action: {
+                accelerationDataManager.deleteAccelerationData()
+            }) {
+                Text("Delete History")
+                    .font(.headline)
+                    .padding()
+                    .foregroundColor(Color.white)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.red)
+                    )
+            }
+            .padding()
         }
         .onAppear {
             accelerationDataManager.loadAccelerationData()
@@ -219,23 +220,18 @@ struct AccelerationHistoryView: View {
     }
 }
 
-
 struct AuthView: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var isSignIn = true
     @State private var isShowingAlert = false
     @State private var alertMessage = ""
-    @State private var isLoggedIn = false // Track the login status
     @State private var accelerationData: [AccelerationData] = []
     var body: some View {
-        if isLoggedIn {
-            Text("Welcome, \(Auth.auth().currentUser?.email ?? "")!")
+        if let user = Auth.auth().currentUser {
+            Text("Welcome, \(user.email ?? "")!")
                 .font(.title)
                 .padding()
-                .onAppear {
-                    loadAccelerationData()
-                }
         } else {
             VStack {
                 Text(isSignIn ? "Sign In" : "Sign Up")
@@ -282,8 +278,6 @@ struct AuthView: View {
             if let error = error {
                 alertMessage = error.localizedDescription
                 isShowingAlert = true
-            } else {
-                isLoggedIn = true
             }
         }
     }
@@ -293,43 +287,12 @@ struct AuthView: View {
             if let error = error {
                 alertMessage = error.localizedDescription
                 isShowingAlert = true
-            } else {
-                isLoggedIn = true
             }
         }
     }
-    
-    func loadAccelerationData() {
-            guard let user = Auth.auth().currentUser else {
-                return
-            }
-            
-            let userId = user.uid
-            let ref = Database.database().reference(withPath: "acceleration").child(userId)
-            
-            ref.observe(.value) { snapshot in
-                var data: [AccelerationData] = []
-                
-                for child in snapshot.children {
-                    if let childSnapshot = child as? DataSnapshot,
-                       let value = childSnapshot.value as? [String: Any],
-                       let acceleration = value["acceleration"] as? Double,
-                       let timestamp = value["timestamp"] as? TimeInterval {
-                        let accelerationData = AccelerationData(acceleration: acceleration, timestamp: Date(timeIntervalSince1970: timestamp))
-                        data.append(accelerationData)
-                    }
-                }
-                
-                DispatchQueue.main.async {
-                    self.accelerationData = data
-                }
-            }
-        }
-
 }
 
-
-struct AccelerationData: Identifiable {
+struct AccelerationData: Identifiable, Equatable {
     var id = UUID()
     let acceleration: Double
     let timestamp: Date
@@ -343,45 +306,56 @@ struct AccelerationData: Identifiable {
 
 class AccelerationDataManager: ObservableObject {
     @Published var accelerationData: [AccelerationData] = []
-
+    
+    init() {
+        loadAccelerationData()
+    }
+    
     func loadAccelerationData() {
-        // Замените "userId" на вашу переменную или значение, представляющее идентификатор пользователя
-        guard let user = Auth.auth().currentUser else {
-            return
-        }
-
-        let userId = user.uid
-        print("User ID: \(userId)")
-
-
-        let database = Database.database().reference()
-        let userAccelerationRef = database.child("acceleration").child(userId)
-        
-        userAccelerationRef.observe(.value) { snapshot in
-            var data: [AccelerationData] = []
+        if let currentUserID = Auth.auth().currentUser?.uid {
+            let ref = Database.database().reference(withPath: "acceleration").child(currentUserID)
             
-            for child in snapshot.children {
-                if let childSnapshot = child as? DataSnapshot,
-                   let value = childSnapshot.value as? [String: Any],
-                   let acceleration = value["acceleration"] as? Double,
-                   let timestamp = value["timestamp"] as? TimeInterval {
-                    let accelerationData = AccelerationData(acceleration: acceleration, timestamp: Date(timeIntervalSince1970: timestamp))
-                    data.append(accelerationData)
+            ref.observeSingleEvent(of: .value) { [weak self] snapshot in
+                var data: [AccelerationData] = []
+                
+                for child in snapshot.children {
+                    if let childSnapshot = child as? DataSnapshot,
+                       let value = childSnapshot.value as? [String: Any],
+                       let acceleration = value["acceleration"] as? Double,
+                       let timestamp = value["timestamp"] as? TimeInterval {
+                        let accelerationData = AccelerationData(acceleration: acceleration, timestamp: Date(timeIntervalSince1970: timestamp))
+                        data.append(accelerationData)
+                    }
+                }
+                
+                DispatchQueue.main.async {
+                    self?.accelerationData = data
                 }
             }
+        } else {
+            accelerationData = [] // If the user is not authenticated, reset the data
+        }
+    }
+    
+    func deleteAccelerationData() {
+        if let currentUserID = Auth.auth().currentUser?.uid {
+            let ref = Database.database().reference(withPath: "acceleration").child(currentUserID)
             
-            DispatchQueue.main.async {
-                self.accelerationData = data
+            ref.removeValue { [weak self] error, _ in
+                if let error = error {
+                    print("Failed to delete acceleration data: \(error)")
+                } else {
+                    print("Acceleration data deleted successfully")
+                    self?.accelerationData = [] // Reset the data after deletion
+                }
             }
         }
     }
 }
 
-
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
     private let motionManager = CMMotionManager()
-    private var timer: Timer?
     
     @Published var acceleration: Double = 0.0
     @Published var averageSpeed: Double = 0.0
@@ -405,38 +379,28 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     func stopUpdatingLocation() {
         locationManager.stopUpdatingLocation()
-        stopUpdatingMotion()
     }
     
     func startUpdatingMotion() {
-        motionManager.startAccelerometerUpdates()
-        timer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
-            self?.processMotionData()
+        if motionManager.isAccelerometerAvailable {
+            motionManager.accelerometerUpdateInterval = updateInterval
+            motionManager.startAccelerometerUpdates(to: OperationQueue.main) { [weak self] (data, error) in
+                guard let accelerometerData = data else { return }
+                let acceleration = sqrt(pow(accelerometerData.acceleration.x, 2) + pow(accelerometerData.acceleration.y, 2) + pow(accelerometerData.acceleration.z, 2))
+                self?.acceleration = acceleration
+            }
         }
     }
     
     func stopUpdatingMotion() {
         motionManager.stopAccelerometerUpdates()
-        timer?.invalidate()
-        timer = nil
     }
-    
-    private func processMotionData() {
-        guard let accelerometerData = motionManager.accelerometerData else { return }
-        
-        let acceleration = sqrt(pow(accelerometerData.acceleration.x, 2) + pow(accelerometerData.acceleration.y, 2) + pow(accelerometerData.acceleration.z, 2))
-        self.acceleration = acceleration
-        
-        guard let location = location else { return }
-        
-        averageSpeed = location.speed
-    }
-
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         
         self.location = location
+        averageSpeed = location.speed
     }
 }
 
@@ -445,6 +409,7 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+
 
 
 
