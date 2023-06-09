@@ -227,11 +227,32 @@ struct AuthView: View {
     @State private var isShowingAlert = false
     @State private var alertMessage = ""
     @State private var accelerationData: [AccelerationData] = []
+    @State private var isLoggedIn = false // Track the login status
+    
     var body: some View {
-        if let user = Auth.auth().currentUser {
-            Text("Welcome, \(user.email ?? "")!")
-                .font(.title)
+        if isLoggedIn {
+            VStack {
+                Text("Welcome, \(Auth.auth().currentUser?.email ?? "")!")
+                    .font(.title)
+                    .padding()
+                
+                Button(action: {
+                    signOut()
+                }) {
+                    Text("Sign Out")
+                        .font(.headline)
+                        .padding()
+                        .foregroundColor(Color.white)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.red)
+                        )
+                }
                 .padding()
+                
+                // Other views or functionality for the authenticated user
+                
+            }
         } else {
             VStack {
                 Text(isSignIn ? "Sign In" : "Sign Up")
@@ -278,6 +299,10 @@ struct AuthView: View {
             if let error = error {
                 alertMessage = error.localizedDescription
                 isShowingAlert = true
+            } else {
+                isLoggedIn = true
+                email = ""
+                password = ""
             }
         }
     }
@@ -287,7 +312,21 @@ struct AuthView: View {
             if let error = error {
                 alertMessage = error.localizedDescription
                 isShowingAlert = true
+            } else {
+                isLoggedIn = true
+                email = ""
+                password = ""
             }
+        }
+    }
+    
+    func signOut() {
+        do {
+            try Auth.auth().signOut()
+            isLoggedIn = false
+        } catch let error {
+            alertMessage = error.localizedDescription
+            isShowingAlert = true
         }
     }
 }
