@@ -14,16 +14,21 @@ import Firebase
 import FirebaseAuth
 import FirebaseDatabase
 
+
 struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var locationManager = LocationManager()
     @State private var accelerationData: [AccelerationData] = []
+    @State private var speedData: [Double] = []
     @AppStorage("SelectedUnitIndex") private var selectedUnitIndex = 0
     @State private var measurementInterval = UserDefaults.standard.double(forKey: "MeasurementInterval")
     @State private var displayPrecision = UserDefaults.standard.integer(forKey: "DisplayPrecision")
     
     @State private var timeTo100: TimeInterval = 0.0
     @State private var timeTo200: TimeInterval = 0.0
+    @State private var isAccelerationStarted = false
+    @State private var isAccelerationCompleted = false
+
     
     private let speedUnits: [String] = ["km/h", "mph"]
     
@@ -35,6 +40,18 @@ struct ContentView: View {
         TabView {
             VStack {
                 if Auth.auth().currentUser != nil {
+                    if isAccelerationStarted {
+                        Text("Acceleration Started")
+                            .font(.title)
+                            .padding()
+                    }
+                    
+                    if isAccelerationCompleted {
+                        Text("Acceleration Completed")
+                            .font(.title)
+                            .padding()
+                    }
+                    
                     Text("Time to 100 km/h: \(timeTo100, specifier: "%.1f") seconds")
                     Text("Time to 200 km/h: \(timeTo200, specifier: "%.1f") seconds")
                     Text("Acceleration: \(locationManager.acceleration, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)") // Use currentSpeedUnit to display the current speed unit
@@ -43,10 +60,11 @@ struct ContentView: View {
                 } else {
                     Text("Please sign in to view the data")
                 }
+
                 
-                LineChartView(data: accelerationData.map(\.acceleration),
-                              title: "Acceleration Speed",
-                              legend: "Acceleration",
+                LineChartView(data: speedData, // Use speedData for the line chart
+                              title: "Speed",
+                              legend: "Speed",
                               style: ChartStyle(backgroundColor: Color.white,
                                                 accentColor: Color.blue,
                                                 gradientColor: GradientColor(start: Color.blue, end: Color.white),
@@ -90,6 +108,20 @@ struct ContentView: View {
                     .padding()
                 }
                 .padding(.horizontal)
+                Button(action: {
+                    resetAccelerationData()
+                }) {
+                    Text("Reset")
+                        .font(.title)
+                        .padding()
+                        .foregroundColor(colorScheme == .dark ? Color.white : Color.black)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(colorScheme == .dark ? Color.black : Color.white)
+                                .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
+                        )
+                }
+                .padding()
             }
             .tabItem {
                 Image(systemName: "speedometer")
@@ -176,6 +208,16 @@ struct ContentView: View {
         }
     }
     
+    private func resetAccelerationData() {
+        timeTo100 = 0.0
+        timeTo200 = 0.0
+        isAccelerationStarted = false
+        isAccelerationCompleted = false
+        accelerationData = []
+        speedData = []
+    }
+
+    
     func saveAccelerationData(acceleration: Double, timestamp: Date) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
@@ -184,10 +226,28 @@ struct ContentView: View {
         
         let data: [String: Any] = [
             "acceleration": acceleration,
+            "speed": locationManager.averageSpeed,
             "timestamp": timestamp.timeIntervalSince1970
         ]
         
-        userAccelerationRef.setValue(data)
+        userAccelerationRef.setValue(data) { error, _ in
+            if error == nil {
+                if acceleration >= 0 && !self.isAccelerationStarted {
+                    self.isAccelerationStarted = true
+                }
+                
+                if acceleration >= 100 && self.timeTo100 == 0.0 {
+                    self.timeTo100 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
+                }
+                
+                if acceleration >= 200 && self.timeTo200 == 0.0 {
+                    self.timeTo200 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
+                    self.isAccelerationCompleted = true
+                }
+                
+                self.speedData.append(locationManager.averageSpeed)
+            }
+        }
     }
 }
 
@@ -448,6 +508,8 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+
+
 
 
 
