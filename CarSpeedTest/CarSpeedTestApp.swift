@@ -13,18 +13,14 @@ import FirebaseDatabase
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        if FirebaseApp.app() == nil {
-            FirebaseApp.configure()
-        }
+        FirebaseApp.configure()
         return true
     }
 }
 
 @main
 struct CarSpeedTestApp: App {
-    init() {
-        FirebaseApp.configure() // Configure Firebase only once in the initializer
-    }
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
         WindowGroup {

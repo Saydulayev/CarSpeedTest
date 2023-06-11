@@ -14,21 +14,19 @@ import Firebase
 import FirebaseAuth
 import FirebaseDatabase
 
-
 struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var locationManager = LocationManager()
     @State private var accelerationData: [AccelerationData] = []
     @State private var speedData: [Double] = []
     @AppStorage("SelectedUnitIndex") private var selectedUnitIndex = 0
-    @State private var measurementInterval = UserDefaults.standard.double(forKey: "MeasurementInterval")
-    @State private var displayPrecision = UserDefaults.standard.integer(forKey: "DisplayPrecision")
+    @AppStorage("MeasurementInterval") private var measurementInterval = 1.0
+    @AppStorage("DisplayPrecision") private var displayPrecision = 0
     
     @State private var timeTo100: TimeInterval = 0.0
     @State private var timeTo200: TimeInterval = 0.0
     @State private var isAccelerationStarted = false
     @State private var isAccelerationCompleted = false
-
     
     private let speedUnits: [String] = ["km/h", "mph"]
     
@@ -39,7 +37,7 @@ struct ContentView: View {
     var body: some View {
         TabView {
             VStack {
-                if Auth.auth().currentUser != nil {
+                if let currentUser = Auth.auth().currentUser {
                     if isAccelerationStarted {
                         Text("Acceleration Started")
                             .font(.title)
@@ -54,23 +52,22 @@ struct ContentView: View {
                     
                     Text("Time to 100 km/h: \(timeTo100, specifier: "%.1f") seconds")
                     Text("Time to 200 km/h: \(timeTo200, specifier: "%.1f") seconds")
-                    Text("Acceleration: \(locationManager.acceleration, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)") // Use currentSpeedUnit to display the current speed unit
+                    Text("Acceleration: \(locationManager.acceleration, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)")
                         .font(.title)
                         .padding()
                 } else {
                     Text("Please sign in to view the data")
                 }
-
                 
-                LineChartView(data: speedData, // Use speedData for the line chart
+                LineChartView(data: speedData,
                               title: "Speed",
                               legend: "Speed",
-                              style: ChartStyle(backgroundColor: Color.white,
-                                                accentColor: Color.blue,
-                                                gradientColor: GradientColor(start: Color.blue, end: Color.white),
-                                                textColor: Color.black,
-                                                legendTextColor: Color.gray,
-                                                dropShadowColor: Color.gray),
+                              style: ChartStyle(backgroundColor: .white,
+                                                accentColor: .blue,
+                                                gradientColor: GradientColor(start: .blue, end: .white),
+                                                textColor: .black,
+                                                legendTextColor: .gray,
+                                                dropShadowColor: .gray),
                               form: CGSize(width: UIScreen.main.bounds.width - 20, height: 240))
                     .padding(.horizontal, 10)
                     .padding(30)
@@ -83,14 +80,15 @@ struct ContentView: View {
                         Text("Start")
                             .font(.title)
                             .padding()
-                            .foregroundColor(colorScheme == .dark ? Color.white : Color.black)
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
                             .background(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(colorScheme == .dark ? Color.black : Color.white)
+                                    .fill(colorScheme == .dark ? .black : .white)
                                     .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
                             )
                     }
                     .padding()
+                    
                     Button(action: {
                         locationManager.stopUpdatingLocation()
                         locationManager.stopUpdatingMotion()
@@ -98,74 +96,52 @@ struct ContentView: View {
                         Text("Stop")
                             .font(.title)
                             .padding()
-                            .foregroundColor(colorScheme == .dark ? Color.white : Color.black)
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
                             .background(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(colorScheme == .dark ? Color.black : Color.white)
+                                    .fill(colorScheme == .dark ? .black : .white)
                                     .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
                             )
                     }
                     .padding()
                 }
                 .padding(.horizontal)
+                
                 Button(action: {
                     resetAccelerationData()
                 }) {
                     Text("Reset")
                         .font(.title)
                         .padding()
-                        .foregroundColor(colorScheme == .dark ? Color.white : Color.black)
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(colorScheme == .dark ? Color.black : Color.white)
+                                .fill(colorScheme == .dark ? .black : .white)
                                 .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
                         )
                 }
                 .padding()
             }
             .tabItem {
-                Image(systemName: "speedometer")
-                Text("Speed")
+                Label("Speed", systemImage: "speedometer")
             }
             
             AccelerationHistoryView()
                 .tabItem {
-                    Image(systemName: "clock")
-                    Text("History")
+                    Label("History", systemImage: "clock")
                 }
             
             AuthView()
                 .tabItem {
-                    Image(systemName: "person.fill")
-                    Text("Account")
+                    Label("Account", systemImage: "person.fill")
                 }
             
-            Form {
-                Section(header: Text("Measurement Interval")) {
-                    Slider(value: $measurementInterval, in: 0...5, step: 0.1) {
-                        Text("Interval: \(measurementInterval, specifier: "%.1f") seconds")
-                    }
+            SettingsView(measurementInterval: $measurementInterval,
+                         displayPrecision: $displayPrecision,
+                         selectedUnitIndex: $selectedUnitIndex)
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
                 }
-                
-                Section(header: Text("Display Precision")) {
-                    Stepper(value: $displayPrecision, in: 0...2) {
-                        Text("Precision: \(displayPrecision)")
-                    }
-                }
-                
-                Section(header: Text("Preferred Unit")) {
-                    Picker("Unit", selection: $selectedUnitIndex) {
-                        ForEach(0..<speedUnits.count, id: \.self) { index in
-                            Text(speedUnits[index])
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                }
-            }
-            .tabItem {
-                Image(systemName: "gear")
-                Text("Settings")
-            }
         }
         .onAppear {
             locationManager.requestLocationAuthorization()
@@ -196,16 +172,6 @@ struct ContentView: View {
                 locationManager.startUpdatingMotion()
             }
         }
-        .onChange(of: measurementInterval) { newValue in
-            locationManager.updateInterval = newValue
-            UserDefaults.standard.set(newValue, forKey: "MeasurementInterval")
-        }
-        .onChange(of: selectedUnitIndex) { newValue in
-            UserDefaults.standard.set(newValue, forKey: "SelectedUnitIndex")
-        }
-        .onChange(of: displayPrecision) { newValue in
-            UserDefaults.standard.set(newValue, forKey: "DisplayPrecision")
-        }
     }
     
     private func resetAccelerationData() {
@@ -216,9 +182,8 @@ struct ContentView: View {
         accelerationData = []
         speedData = []
     }
-
     
-    func saveAccelerationData(acceleration: Double, timestamp: Date) {
+    private func saveAccelerationData(acceleration: Double, timestamp: Date) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
         let database = Database.database().reference()
@@ -232,20 +197,20 @@ struct ContentView: View {
         
         userAccelerationRef.setValue(data) { error, _ in
             if error == nil {
-                if acceleration >= 0 && !self.isAccelerationStarted {
-                    self.isAccelerationStarted = true
+                if acceleration >= 0 && !isAccelerationStarted {
+                    isAccelerationStarted = true
                 }
                 
-                if acceleration >= 100 && self.timeTo100 == 0.0 {
-                    self.timeTo100 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
+                if acceleration >= 100 && timeTo100 == 0.0 {
+                    timeTo100 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
                 }
                 
-                if acceleration >= 200 && self.timeTo200 == 0.0 {
-                    self.timeTo200 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
-                    self.isAccelerationCompleted = true
+                if acceleration >= 200 && timeTo200 == 0.0 {
+                    timeTo200 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
+                    isAccelerationCompleted = true
                 }
                 
-                self.speedData.append(locationManager.averageSpeed)
+                speedData.append(locationManager.averageSpeed)
             }
         }
     }
@@ -260,16 +225,17 @@ struct AccelerationHistoryView: View {
                 Text("Acceleration: \(acceleration.acceleration, specifier: "%.2f")")
                 Text("Timestamp: \(acceleration.timestampString)")
             }
+            
             Button(action: {
                 accelerationDataManager.deleteAccelerationData()
             }) {
                 Text("Delete History")
                     .font(.headline)
                     .padding()
-                    .foregroundColor(Color.white)
+                    .foregroundColor(.white)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.red)
+                            .fill(.red)
                     )
             }
             .padding()
@@ -286,8 +252,7 @@ struct AuthView: View {
     @State private var isSignIn = true
     @State private var isShowingAlert = false
     @State private var alertMessage = ""
-    @State private var accelerationData: [AccelerationData] = []
-    @State private var isLoggedIn = false // Track the login status
+    @State private var isLoggedIn = false
     
     var body: some View {
         if isLoggedIn {
@@ -302,16 +267,13 @@ struct AuthView: View {
                     Text("Sign Out")
                         .font(.headline)
                         .padding()
-                        .foregroundColor(Color.white)
+                        .foregroundColor(.white)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.red)
+                                .fill(.red)
                         )
                 }
                 .padding()
-                
-                // Other views or functionality for the authenticated user
-                
             }
         } else {
             VStack {
@@ -333,10 +295,10 @@ struct AuthView: View {
                     Text(isSignIn ? "Sign In" : "Sign Up")
                         .font(.headline)
                         .padding()
-                        .foregroundColor(Color.white)
+                        .foregroundColor(.white)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.blue)
+                                .fill(.blue)
                         )
                 }
                 .padding()
@@ -432,7 +394,7 @@ class AccelerationDataManager: ObservableObject {
                 }
             }
         } else {
-            accelerationData = [] // If the user is not authenticated, reset the data
+            accelerationData = []
         }
     }
     
@@ -445,7 +407,7 @@ class AccelerationDataManager: ObservableObject {
                     print("Failed to delete acceleration data: \(error)")
                 } else {
                     print("Acceleration data deleted successfully")
-                    self?.accelerationData = [] // Reset the data after deletion
+                    self?.accelerationData = []
                 }
             }
         }
@@ -503,11 +465,45 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 }
 
+struct SettingsView: View {
+    @Binding var measurementInterval: Double
+    @Binding var displayPrecision: Int
+    @Binding var selectedUnitIndex: Int
+    
+    private let speedUnits: [String] = ["km/h", "mph"]
+    
+    var body: some View {
+        Form {
+            Section(header: Text("Measurement Interval")) {
+                Slider(value: $measurementInterval, in: 0...5, step: 0.1) {
+                    Text("Interval: \(measurementInterval, specifier: "%.1f") seconds")
+                }
+            }
+            
+            Section(header: Text("Display Precision")) {
+                Stepper(value: $displayPrecision, in: 0...2) {
+                    Text("Precision: \(displayPrecision)")
+                }
+            }
+            
+            Section(header: Text("Preferred Unit")) {
+                Picker("Unit", selection: $selectedUnitIndex) {
+                    ForEach(0..<speedUnits.count, id: \.self) { index in
+                        Text(speedUnits[index])
+                    }
+                }
+                .pickerStyle(SegmentedPickerStyle())
+            }
+        }
+    }
+}
+
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
     }
 }
+
 
 
 
