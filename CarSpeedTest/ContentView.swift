@@ -34,10 +34,19 @@ struct ContentView: View {
         speedUnits[selectedUnitIndex]
     }
     
+    var preferredSpeedUnit: String {
+        if selectedUnitIndex == 0 {
+            return "km/h"
+        } else {
+            return "mph"
+        }
+    }
+    
+    
     var body: some View {
         TabView {
             VStack {
-                if let currentUser = Auth.auth().currentUser {
+                if Auth.auth().currentUser != nil {
                     if isAccelerationStarted {
                         Text("Acceleration Started")
                             .font(.title)
@@ -50,8 +59,8 @@ struct ContentView: View {
                             .padding()
                     }
                     
-                    Text("Time to 100 km/h: \(timeTo100, specifier: "%.1f") seconds")
-                    Text("Time to 200 km/h: \(timeTo200, specifier: "%.1f") seconds")
+                    Text("Time to 100 \(preferredSpeedUnit): \(timeTo100, specifier: "%.1f") seconds")
+                    Text("Time to 200 \(preferredSpeedUnit): \(timeTo200, specifier: "%.1f") seconds")
                     Text("Acceleration: \(locationManager.acceleration, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)")
                         .font(.title)
                         .padding()
@@ -69,16 +78,17 @@ struct ContentView: View {
                                                 legendTextColor: .gray,
                                                 dropShadowColor: .gray),
                               form: CGSize(width: UIScreen.main.bounds.width - 20, height: 240))
-                    .padding(.horizontal, 10)
-                    .padding(30)
+                .padding(.horizontal, 10)
+                .padding(30)
                 
                 HStack {
                     Button(action: {
                         locationManager.startUpdatingLocation()
                         locationManager.startUpdatingMotion()
                     }) {
-                        Text("Start")
+                        Image(systemName: "play")
                             .font(.title)
+                            .frame(width: 55, height: 55) // Установите желаемый размер кнопки
                             .padding()
                             .foregroundColor(colorScheme == .dark ? .white : .black)
                             .background(
@@ -93,8 +103,9 @@ struct ContentView: View {
                         locationManager.stopUpdatingLocation()
                         locationManager.stopUpdatingMotion()
                     }) {
-                        Text("Stop")
+                        Image(systemName: "stop")
                             .font(.title)
+                            .frame(width: 55, height: 55) // Установите желаемый размер кнопки
                             .padding()
                             .foregroundColor(colorScheme == .dark ? .white : .black)
                             .background(
@@ -104,23 +115,28 @@ struct ContentView: View {
                             )
                     }
                     .padding()
-                }
-                .padding(.horizontal)
+                    
+                    Button(action: {
+                        resetAccelerationData()
+                    }) {
+                        Image(systemName: "gobackward")
+                            .font(.title)
+                            .frame(width: 55, height: 55) // Установите желаемый размер кнопки
+                            .padding()
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(colorScheme == .dark ? .black : .white)
+                                    .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
+                            )
+                    }
+                    .padding()
+                    
+                } .padding(.horizontal)
                 
-                Button(action: {
-                    resetAccelerationData()
-                }) {
-                    Text("Reset")
-                        .font(.title)
-                        .padding()
-                        .foregroundColor(colorScheme == .dark ? .white : .black)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(colorScheme == .dark ? .black : .white)
-                                .shadow(color: colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.3), radius: 3, x: 0, y: 0)
-                        )
-                }
-                .padding()
+                
+                
+                
             }
             .tabItem {
                 Label("Speed", systemImage: "speedometer")
@@ -139,9 +155,9 @@ struct ContentView: View {
             SettingsView(measurementInterval: $measurementInterval,
                          displayPrecision: $displayPrecision,
                          selectedUnitIndex: $selectedUnitIndex)
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
-                }
+            .tabItem {
+                Label("Settings", systemImage: "gear")
+            }
         }
         .onAppear {
             locationManager.requestLocationAuthorization()
@@ -183,6 +199,15 @@ struct ContentView: View {
         speedData = []
     }
     
+    func convertSpeedToKMH(_ speed: Double) -> Double {
+        if selectedUnitIndex == 1 {
+            // Convert mph to km/h
+            return speed * 1.60934
+        }
+        return speed
+    }
+    
+    
     private func saveAccelerationData(acceleration: Double, timestamp: Date) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
@@ -201,11 +226,11 @@ struct ContentView: View {
                     isAccelerationStarted = true
                 }
                 
-                if acceleration >= 100 && timeTo100 == 0.0 {
+                if acceleration >= convertSpeedToKMH(100) && timeTo100 == 0.0 {
                     timeTo100 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
                 }
                 
-                if acceleration >= 200 && timeTo200 == 0.0 {
+                if acceleration >= convertSpeedToKMH(200) && timeTo200 == 0.0 {
                     timeTo200 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
                     isAccelerationCompleted = true
                 }
