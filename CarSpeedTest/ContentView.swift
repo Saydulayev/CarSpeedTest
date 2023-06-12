@@ -13,6 +13,9 @@ import SwiftUICharts
 import Firebase
 import FirebaseAuth
 import FirebaseDatabase
+import KeychainAccess
+
+
 
 struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -271,14 +274,18 @@ struct AccelerationHistoryView: View {
     }
 }
 
+
 struct AuthView: View {
     @State private var email: String = ""
     @State private var password: String = ""
+    @State private var confirmPassword: String = ""
     @State private var isSignIn = true
     @State private var isShowingAlert = false
     @State private var alertMessage = ""
-    @State private var isLoggedIn = false
-    
+    @State private var accelerationData: [AccelerationData] = []
+    @State private var isLoggedIn = false // Track the login status
+    let keychain = Keychain(service: "com.example.app") // Укажите идентификатор вашего приложения
+
     var body: some View {
         if isLoggedIn {
             VStack {
@@ -292,13 +299,20 @@ struct AuthView: View {
                     Text("Sign Out")
                         .font(.headline)
                         .padding()
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.white)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(.red)
+                                .fill(Color.red)
                         )
                 }
                 .padding()
+                
+                // Other views or functionality for the authenticated user
+                
+            }
+            .onAppear {
+                // Restore saved user credentials
+                restoreUserCredentials()
             }
         } else {
             VStack {
@@ -314,19 +328,35 @@ struct AuthView: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding(.horizontal)
                 
+                if !isSignIn {
+                    SecureField("Confirm Password", text: $confirmPassword)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                }
+                
                 Button(action: {
                     isSignIn ? signIn() : signUp()
                 }) {
                     Text(isSignIn ? "Sign In" : "Sign Up")
                         .font(.headline)
                         .padding()
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.white)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(.blue)
+                                .fill(Color.blue)
                         )
                 }
                 .padding()
+                
+                if isSignIn {
+                    Button(action: {
+                        resetPassword()
+                    }) {
+                        Text("Forgot Password?")
+                            .foregroundColor(.blue)
+                            .padding()
+                    }
+                }
                 
                 Text(isSignIn ? "Don't have an account? Sign up" : "Already have an account? Sign in")
                     .foregroundColor(.blue)
@@ -338,6 +368,10 @@ struct AuthView: View {
             .alert(isPresented: $isShowingAlert) {
                 Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
+            .onAppear {
+                // Check if user is already signed in
+                checkUserSignIn()
+            }
         }
     }
     
@@ -348,6 +382,7 @@ struct AuthView: View {
                 isShowingAlert = true
             } else {
                 isLoggedIn = true
+                saveUserCredentials() // Save user credentials upon successful sign-in
                 email = ""
                 password = ""
             }
@@ -355,14 +390,18 @@ struct AuthView: View {
     }
     
     func signUp() {
+        guard password == confirmPassword else {
+            alertMessage = "Passwords do not match"
+            isShowingAlert = true
+            return
+        }
+        
         Auth.auth().createUser(withEmail: email, password: password) { result, error in
             if let error = error {
                 alertMessage = error.localizedDescription
                 isShowingAlert = true
             } else {
-                isLoggedIn = true
-                email = ""
-                password = ""
+                sendVerificationEmail() // Send verification email upon successful sign-up
             }
         }
     }
@@ -371,9 +410,74 @@ struct AuthView: View {
         do {
             try Auth.auth().signOut()
             isLoggedIn = false
+            clearUserCredentials() // Clear saved user credentials upon sign-out
         } catch let error {
             alertMessage = error.localizedDescription
             isShowingAlert = true
+        }
+    }
+    
+    func resetPassword() {
+        Auth.auth().sendPasswordReset(withEmail: email) { error in
+            if let error = error {
+                alertMessage = error.localizedDescription
+                isShowingAlert = true
+            } else {
+                alertMessage = "Password reset email has been sent. Please check your inbox."
+                isShowingAlert = true
+            }
+        }
+    }
+    
+    func sendVerificationEmail() {
+        Auth.auth().currentUser?.sendEmailVerification { error in
+            if let error = error {
+                alertMessage = error.localizedDescription
+                isShowingAlert = true
+            } else {
+                alertMessage = "Verification email has been sent. Please check your inbox."
+                isShowingAlert = true
+            }
+        }
+    }
+    
+    // Save user credentials to Keychain
+    func saveUserCredentials() {
+        do {
+            try keychain.set(email, key: "UserEmail")
+            try keychain.set(password, key: "UserPassword")
+        } catch let error {
+            print("Error saving user credentials: \(error.localizedDescription)")
+        }
+    }
+    
+    // Restore saved user credentials from Keychain
+    func restoreUserCredentials() {
+        do {
+            if let savedEmail = try keychain.get("UserEmail"),
+               let savedPassword = try keychain.get("UserPassword") {
+                email = savedEmail
+                password = savedPassword
+            }
+        } catch let error {
+            print("Error restoring user credentials: \(error.localizedDescription)")
+        }
+    }
+    
+    // Clear saved user credentials from Keychain
+    func clearUserCredentials() {
+        do {
+            try keychain.remove("UserEmail")
+            try keychain.remove("UserPassword")
+        } catch let error {
+            print("Error clearing user credentials: \(error.localizedDescription)")
+        }
+    }
+    
+    // Check if user is already signed in
+    func checkUserSignIn() {
+        if Auth.auth().currentUser != nil {
+            isLoggedIn = true
         }
     }
 }
@@ -392,10 +496,12 @@ struct AccelerationData: Identifiable, Equatable {
 
 class AccelerationDataManager: ObservableObject {
     @Published var accelerationData: [AccelerationData] = []
-    
+    @Published var timeTo100: TimeInterval = 0.0
+    @Published var timeTo200: TimeInterval = 0.0
     init() {
         loadAccelerationData()
     }
+    
     
     func loadAccelerationData() {
         if let currentUserID = Auth.auth().currentUser?.uid {
@@ -437,7 +543,22 @@ class AccelerationDataManager: ObservableObject {
             }
         }
     }
-}
+    
+    func saveAccelerationResult(speed: Double) {
+            if speed >= 100 && timeTo100 == 0.0 {
+                timeTo100 = getCurrentTimestamp()
+            }
+            
+            if speed >= 200 && timeTo200 == 0.0 {
+                timeTo200 = getCurrentTimestamp()
+            }
+        }
+        
+        private func getCurrentTimestamp() -> TimeInterval {
+            return Date().timeIntervalSince1970
+        }
+    }
+
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
