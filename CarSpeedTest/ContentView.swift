@@ -211,11 +211,11 @@ struct ContentView: View {
     }
     
     
-    private func saveAccelerationData(acceleration: Double, timestamp: Date) {
+    func saveAccelerationData(acceleration: Double, timestamp: Date) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
         let database = Database.database().reference()
-        let userAccelerationRef = database.child("acceleration").child(userId).childByAutoId()
+        let userAccelerationRef = database.child("acceleration").child(userId)
         
         let data: [String: Any] = [
             "acceleration": acceleration,
@@ -225,23 +225,29 @@ struct ContentView: View {
         
         userAccelerationRef.setValue(data) { error, _ in
             if error == nil {
-                if acceleration >= 0 && !isAccelerationStarted {
-                    isAccelerationStarted = true
+                if acceleration >= 0 && !self.isAccelerationStarted {
+                    self.isAccelerationStarted = true
                 }
                 
-                if acceleration >= convertSpeedToKMH(100) && timeTo100 == 0.0 {
-                    timeTo100 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
+                if acceleration >= 100 && self.timeTo100 == 0.0 {
+                    self.timeTo100 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
                 }
                 
-                if acceleration >= convertSpeedToKMH(200) && timeTo200 == 0.0 {
-                    timeTo200 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
-                    isAccelerationCompleted = true
+                if acceleration >= 200 && self.timeTo200 == 0.0 {
+                    self.timeTo200 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
+                    self.isAccelerationCompleted = true
                 }
                 
-                speedData.append(locationManager.averageSpeed)
+                if acceleration >= 100 || acceleration >= 200 {
+                    let accelerationData = AccelerationData(acceleration: acceleration, speed: locationManager.averageSpeed, timestamp: timestamp)
+                    self.accelerationData.append(accelerationData)
+                }
+                
+                self.speedData.append(locationManager.averageSpeed)
             }
         }
     }
+
 }
 
 struct AccelerationHistoryView: View {
@@ -482,9 +488,11 @@ struct AuthView: View {
     }
 }
 
+
 struct AccelerationData: Identifiable, Equatable {
     var id = UUID()
     let acceleration: Double
+    let speed: Double
     let timestamp: Date
     
     var timestampString: String {
@@ -496,12 +504,10 @@ struct AccelerationData: Identifiable, Equatable {
 
 class AccelerationDataManager: ObservableObject {
     @Published var accelerationData: [AccelerationData] = []
-    @Published var timeTo100: TimeInterval = 0.0
-    @Published var timeTo200: TimeInterval = 0.0
+    
     init() {
         loadAccelerationData()
     }
-    
     
     func loadAccelerationData() {
         if let currentUserID = Auth.auth().currentUser?.uid {
@@ -514,8 +520,11 @@ class AccelerationDataManager: ObservableObject {
                     if let childSnapshot = child as? DataSnapshot,
                        let value = childSnapshot.value as? [String: Any],
                        let acceleration = value["acceleration"] as? Double,
+                       let speed = value["speed"] as? Double,
                        let timestamp = value["timestamp"] as? TimeInterval {
-                        let accelerationData = AccelerationData(acceleration: acceleration, timestamp: Date(timeIntervalSince1970: timestamp))
+                        
+                        let accelerationData = AccelerationData(acceleration: acceleration, speed: speed, timestamp: Date(timeIntervalSince1970: timestamp))
+                        
                         data.append(accelerationData)
                     }
                 }
@@ -525,7 +534,7 @@ class AccelerationDataManager: ObservableObject {
                 }
             }
         } else {
-            accelerationData = []
+            accelerationData = [] // If the user is not authenticated, reset the data
         }
     }
     
@@ -538,26 +547,12 @@ class AccelerationDataManager: ObservableObject {
                     print("Failed to delete acceleration data: \(error)")
                 } else {
                     print("Acceleration data deleted successfully")
-                    self?.accelerationData = []
+                    self?.accelerationData = [] // Reset the data after deletion
                 }
             }
         }
     }
-    
-    func saveAccelerationResult(speed: Double) {
-            if speed >= 100 && timeTo100 == 0.0 {
-                timeTo100 = getCurrentTimestamp()
-            }
-            
-            if speed >= 200 && timeTo200 == 0.0 {
-                timeTo200 = getCurrentTimestamp()
-            }
-        }
-        
-        private func getCurrentTimestamp() -> TimeInterval {
-            return Date().timeIntervalSince1970
-        }
-    }
+}
 
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {

@@ -378,7 +378,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CarSpeedTest/Info.plist;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Measurement requires access to your location.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app needs access to your location even when it is in the background to provide continuous location-based services.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs access to your location when it is in use to provide location-based services.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "This app needs access to the device's motion data to measure acceleration for tracking purposes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -410,7 +412,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CarSpeedTest/Info.plist;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Measurement requires access to your location.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app needs access to your location even when it is in the background to provide continuous location-based services.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs access to your location when it is in use to provide location-based services.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "This app needs access to the device's motion data to measure acceleration for tracking purposes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
