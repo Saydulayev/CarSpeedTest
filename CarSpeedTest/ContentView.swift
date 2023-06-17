@@ -173,7 +173,7 @@ struct ContentView: View {
                 if timeTo100 == 0.0 && averageSpeed >= 100.0 {
                     timeTo100 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
                 }
-                
+
                 if timeTo200 == 0.0 && averageSpeed >= 200.0 {
                     timeTo200 = timestamp.timeIntervalSince(accelerationData.first?.timestamp ?? timestamp)
                 }
@@ -228,26 +228,25 @@ struct ContentView: View {
                 if acceleration >= 0 && !self.isAccelerationStarted {
                     self.isAccelerationStarted = true
                 }
-                
+
                 if acceleration >= 100 && self.timeTo100 == 0.0 {
                     self.timeTo100 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
                 }
-                
+
                 if acceleration >= 200 && self.timeTo200 == 0.0 {
                     self.timeTo200 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
                     self.isAccelerationCompleted = true
                 }
-                
+
                 if acceleration >= 100 || acceleration >= 200 {
                     let accelerationData = AccelerationData(acceleration: acceleration, speed: locationManager.averageSpeed, timestamp: timestamp)
                     self.accelerationData.append(accelerationData)
                 }
-                
+
                 self.speedData.append(locationManager.averageSpeed)
             }
         }
     }
-
 }
 
 struct AccelerationHistoryView: View {
