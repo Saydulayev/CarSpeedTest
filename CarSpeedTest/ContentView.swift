@@ -50,11 +50,11 @@ struct ContentView: View {
         TabView {
             VStack {
                 if Auth.auth().currentUser != nil {
-                    if isAccelerationStarted {
-                        Text("Acceleration Started")
-                            .font(.title)
-                            .padding()
-                    }
+//                    if isAccelerationStarted {
+//                        Text("Acceleration Started")
+//                            .font(.title)
+//                            .padding()
+//                    }
                     
                     if isAccelerationCompleted {
                         Text("Acceleration Completed")
@@ -228,21 +228,24 @@ struct ContentView: View {
                 if acceleration >= 0 && !self.isAccelerationStarted {
                     self.isAccelerationStarted = true
                 }
-
+                
                 if acceleration >= 100 && self.timeTo100 == 0.0 {
                     self.timeTo100 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
                 }
-
+                
                 if acceleration >= 200 && self.timeTo200 == 0.0 {
                     self.timeTo200 = timestamp.timeIntervalSince(self.accelerationData.first?.timestamp ?? timestamp)
                     self.isAccelerationCompleted = true
                 }
-
+                
                 if acceleration >= 100 || acceleration >= 200 {
                     let accelerationData = AccelerationData(acceleration: acceleration, speed: locationManager.averageSpeed, timestamp: timestamp)
                     self.accelerationData.append(accelerationData)
+                } else {
+                    let unsuccessfulAttemptData = AccelerationData(acceleration: acceleration, speed: locationManager.averageSpeed, timestamp: timestamp)
+                    self.accelerationData.append(unsuccessfulAttemptData)
                 }
-
+                
                 self.speedData.append(locationManager.averageSpeed)
             }
         }
