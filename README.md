@@ -1,4 +1,12 @@
+#### Preview
 
+<table border=0>
+    <tr>
+        <td>
+            <image src=https://github.com/Saydulayev/CarSpeedTest/blob/mainTest/CarSpeedTest/Screenshots/acceleration.GIF width=230 align=center>
+        </td>
+    </tr>
+</table>
 # Speed Measurement App
 
 This iOS app allows users to measure their acceleration and track their speed in real-time using GPS data. It provides a graphical representation of acceleration data over time and allows users to view and manage their speed history.
