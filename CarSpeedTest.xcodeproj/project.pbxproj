@@ -15,7 +15,7 @@
 		C0713F272A261E7D00B87B06 /* SwiftUICharts in Frameworks */ = {isa = PBXBuildFile; productRef = C0713F262A261E7D00B87B06 /* SwiftUICharts */; };
 		C08B19632A2E99D000153AE3 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C08B19622A2E99D000153AE3 /* GoogleService-Info.plist */; };
 		C0C38B5B2A436E5400415698 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-21 at 19.43.25.png in Resources */ = {isa = PBXBuildFile; fileRef = C0C38B5A2A436E5400415698 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-21 at 19.43.25.png */; };
-		C0C38B5D2A4373BF00415698 /* ezgif.com-video-to-gif.gif in Resources */ = {isa = PBXBuildFile; fileRef = C0C38B5C2A4373BE00415698 /* ezgif.com-video-to-gif.gif */; };
+		C0C38B5F2A43784500415698 /* acceleration.GIF in Resources */ = {isa = PBXBuildFile; fileRef = C0C38B5E2A43784500415698 /* acceleration.GIF */; };
 		C0FA01082A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.05.png in Resources */ = {isa = PBXBuildFile; fileRef = C0FA01042A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.05.png */; };
 		C0FA01092A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.11.png in Resources */ = {isa = PBXBuildFile; fileRef = C0FA01052A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.11.png */; };
 		C0FA010A2A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.04.22.png in Resources */ = {isa = PBXBuildFile; fileRef = C0FA01062A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.04.22.png */; };
@@ -32,7 +32,7 @@
 		C0713F1E2A261E5700B87B06 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C08B19622A2E99D000153AE3 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../../GoogleService-Info.plist"; sourceTree = "<group>"; };
 		C0C38B5A2A436E5400415698 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-21 at 19.43.25.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Simulator Screenshot - iPhone 14 Pro - 2023-06-21 at 19.43.25.png"; sourceTree = "<group>"; };
-		C0C38B5C2A4373BE00415698 /* ezgif.com-video-to-gif.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = "ezgif.com-video-to-gif.gif"; sourceTree = "<group>"; };
+		C0C38B5E2A43784500415698 /* acceleration.GIF */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = acceleration.GIF; sourceTree = "<group>"; };
 		C0FA01042A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.05.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.05.png"; sourceTree = "<group>"; };
 		C0FA01052A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.11.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.11.png"; sourceTree = "<group>"; };
 		C0FA01062A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.04.22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.04.22.png"; sourceTree = "<group>"; };
@@ -112,7 +112,7 @@
 		C09979EC2A2CAF19008FB694 /* Screenshots */ = {
 			isa = PBXGroup;
 			children = (
-				C0C38B5C2A4373BE00415698 /* ezgif.com-video-to-gif.gif */,
+				C0C38B5E2A43784500415698 /* acceleration.GIF */,
 				C0FA01062A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.04.22.png */,
 				C0C38B5A2A436E5400415698 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-21 at 19.43.25.png */,
 				C0FA01042A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.05.png */,
@@ -193,8 +193,8 @@
 				C08B19632A2E99D000153AE3 /* GoogleService-Info.plist in Resources */,
 				C0C38B5B2A436E5400415698 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-21 at 19.43.25.png in Resources */,
 				C0FA01082A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.05.05.png in Resources */,
+				C0C38B5F2A43784500415698 /* acceleration.GIF in Resources */,
 				C0FA010A2A3E73C700C98092 /* Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 01.04.22.png in Resources */,
-				C0C38B5D2A4373BF00415698 /* ezgif.com-video-to-gif.gif in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
