@@ -23,18 +23,18 @@ struct ContentView: View {
     @AppStorage("SelectedUnitIndex") private var selectedUnitIndex = 0
     @AppStorage("MeasurementInterval") private var measurementInterval = 1.0
     @AppStorage("DisplayPrecision") private var displayPrecision = 0
-
+    
     @State private var timeTo100: TimeInterval = 0.0
     @State private var timeTo200: TimeInterval = 0.0
     @State private var isAccelerationStarted = false
     @State private var isAccelerationCompleted = false
-
+    
     private let speedUnits: [String] = ["km/h", "mph"]
-
+    
     var currentSpeedUnit: String {
         speedUnits[selectedUnitIndex]
     }
-
+    
     var preferredSpeedUnit: String {
         if selectedUnitIndex == 0 {
             return "km/h"
@@ -42,7 +42,7 @@ struct ContentView: View {
             return "mph"
         }
     }
-
+    
     var body: some View {
         TabView {
             VStack {
@@ -52,13 +52,13 @@ struct ContentView: View {
                             .font(.title)
                             .padding()
                     }
-
+                    
                     if isAccelerationCompleted {
                         Text("Acceleration Completed")
                             .font(.title)
                             .padding()
                     }
-
+                    
                     Text("Time to 100 \(preferredSpeedUnit): \(timeTo100, specifier: "%.1f") seconds")
                     Text("Time to 200 \(preferredSpeedUnit): \(timeTo200, specifier: "%.1f") seconds")
                     Text("Speed: \(locationManager.averageSpeed, specifier: "%.\(displayPrecision)f") \(currentSpeedUnit)")
@@ -67,7 +67,7 @@ struct ContentView: View {
                 } else {
                     Text("Please sign in to view the data")
                 }
-
+                
                 LineChartView(data: speedData,
                               title: "Speed",
                               legend: "Speed",
@@ -78,9 +78,9 @@ struct ContentView: View {
                                                 legendTextColor: .gray,
                                                 dropShadowColor: .gray),
                               form: CGSize(width: UIScreen.main.bounds.width - 20, height: 240))
-                    .padding(.horizontal, 10)
-                    .padding(30)
-
+                .padding(.horizontal, 10)
+                .padding(30)
+                
                 HStack {
                     Button(action: {
                         locationManager.startUpdatingLocation()
@@ -97,7 +97,7 @@ struct ContentView: View {
                             )
                     }
                     .padding()
-
+                    
                     Button(action: {
                         locationManager.stopUpdatingLocation()
                     }) {
@@ -113,7 +113,7 @@ struct ContentView: View {
                             )
                     }
                     .padding()
-
+                    
                     Button(action: {
                         resetAccelerationData()
                     }) {
@@ -129,31 +129,31 @@ struct ContentView: View {
                             )
                     }
                     .padding()
-
+                    
                 }
                 .padding(.horizontal)
-
+                
             }
             .tabItem {
                 Label("Speed", systemImage: "speedometer")
             }
-
+            
             AccelerationHistoryView()
                 .tabItem {
                     Label("History", systemImage: "clock")
                 }
-
+            
             AuthView()
                 .tabItem {
                     Label("Account", systemImage: "person.fill")
                 }
-
+            
             SettingsView(measurementInterval: $measurementInterval,
                          displayPrecision: $displayPrecision,
                          selectedUnitIndex: $selectedUnitIndex)
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
-                }
+            .tabItem {
+                Label("Settings", systemImage: "gear")
+            }
         }
         .onAppear {
             locationManager.requestLocationAuthorization()
@@ -162,13 +162,13 @@ struct ContentView: View {
         .onReceive(locationManager.$averageSpeed) { averageSpeed in
             DispatchQueue.main.async {
                 let timestamp = Date()
-
+                
                 do {
                     try handleAccelerationUpdate(averageSpeed: averageSpeed, timestamp: timestamp)
                 } catch {
                     print("Error handling acceleration update: \(error)")
                 }
-
+                
                 speedData.append(averageSpeed)
             }
         }
@@ -181,7 +181,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     private func resetAccelerationData() {
         timeTo100 = 0.0
         timeTo200 = 0.0
@@ -189,19 +189,19 @@ struct ContentView: View {
         isAccelerationCompleted = false
         speedData = []
     }
-
+    
     func saveAccelerationData(acceleration: Double, timestamp: Date) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
-
+        
         let database = Database.database().reference()
         let userAccelerationRef = database.child("acceleration").child(userId)
-
+        
         let data: [String: Any] = [
             "acceleration": acceleration,
             "speed": locationManager.averageSpeed,
             "timestamp": timestamp.timeIntervalSince1970
         ]
-
+        
         userAccelerationRef.setValue(data) { error, _ in
             if let error = error {
                 print("Failed to save acceleration data: \(error)")
@@ -214,34 +214,45 @@ struct ContentView: View {
             }
         }
     }
-
+    
     private func handleAccelerationUpdate(averageSpeed: Double, timestamp: Date) throws {
         let acceleration = calculateAcceleration(speed: averageSpeed)
         try handleAccelerationStart(acceleration: acceleration)
         try handleTimeTo100Update(averageSpeed: averageSpeed, timestamp: timestamp)
         try handleTimeTo200Update(averageSpeed: averageSpeed, timestamp: timestamp)
     }
-
+    
     private func handleAccelerationSave(acceleration: Double, timestamp: Date) throws {
         try handleAccelerationStart(acceleration: acceleration)
         try handleTimeTo100Save(acceleration: acceleration, timestamp: timestamp)
         try handleTimeTo200Save(acceleration: acceleration, timestamp: timestamp)
     }
-
+    
     private func handleAccelerationStart(acceleration: Double) throws {
         if acceleration >= 0 && !isAccelerationStarted {
             isAccelerationStarted = true
         }
     }
-
+    
+//    private func handleTimeTo100Update(averageSpeed: Double, timestamp: Date) throws {
+//        if timeTo100 == 0.0 && averageSpeed >= 100.0 {
+//            if let firstTimestamp = locationManager.firstLocationTimestamp {
+//                timeTo100 = timestamp.timeIntervalSince(firstTimestamp)
+//            }
+//        }
+//    }
+    
     private func handleTimeTo100Update(averageSpeed: Double, timestamp: Date) throws {
-        if timeTo100 == 0.0 && averageSpeed >= 100.0 {
+        if timeTo100 == 0.0 && averageSpeed > 0.0 {
             if let firstTimestamp = locationManager.firstLocationTimestamp {
                 timeTo100 = timestamp.timeIntervalSince(firstTimestamp)
             }
         }
     }
 
+    
+    
+    
     private func handleTimeTo100Save(acceleration: Double, timestamp: Date) throws {
         if acceleration >= 100 && timeTo100 == 0.0 {
             if let firstTimestamp = locationManager.firstLocationTimestamp {
@@ -249,7 +260,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     private func handleTimeTo200Update(averageSpeed: Double, timestamp: Date) throws {
         if timeTo200 == 0.0 && averageSpeed >= 200.0 {
             if let firstTimestamp = locationManager.firstLocationTimestamp {
@@ -258,7 +269,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     private func handleTimeTo200Save(acceleration: Double, timestamp: Date) throws {
         if acceleration >= 200 && timeTo200 == 0.0 {
             if let firstTimestamp = locationManager.firstLocationTimestamp {
@@ -267,7 +278,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     private func calculateAcceleration(speed: Double) -> Double {
         // Perform acceleration calculation based on speed data
         // Return the calculated acceleration value
@@ -280,12 +291,26 @@ struct ContentView: View {
 struct AccelerationHistoryView: View {
     @ObservedObject var accelerationDataManager = AccelerationDataManager()
     @State private var isShowingDeleteAlert = false
+    @State private var searchText = ""
+    
+    var filteredAccelerationData: [AccelerationData] {
+        accelerationDataManager.accelerationData.filter { acceleration in
+            searchText.isEmpty || acceleration.timestampString.localizedStandardContains(searchText)
+        }
+    }
     
     var body: some View {
         VStack {
-            List(accelerationDataManager.accelerationData) { acceleration in
-                Text("Acceleration: \(acceleration.acceleration, specifier: "%.2f")")
-                Text("Timestamp: \(acceleration.timestampString)")
+            SearchBar(text: $searchText)
+                .padding(.horizontal)
+            
+            List(filteredAccelerationData) { acceleration in
+                VStack(alignment: .leading) {
+                    Text("Acceleration: \(acceleration.acceleration, specifier: "%.2f")")
+                    Text("Speed: \(acceleration.speed, specifier: "%.2f")")
+                    Text("Timestamp: \(acceleration.timestampString)")
+                }
+                .padding(.vertical)
             }
             
             Button(action: {
@@ -313,6 +338,27 @@ struct AccelerationHistoryView: View {
         }
         .onAppear {
             accelerationDataManager.loadAccelerationData()
+        }
+    }
+}
+
+struct SearchBar: View {
+    @Binding var text: String
+    
+    var body: some View {
+        HStack {
+            TextField("Search", text: $text)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+            
+            if !text.isEmpty {
+                Button(action: {
+                    text = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                }
+                .buttonStyle(BorderlessButtonStyle())
+            }
         }
     }
 }
@@ -661,6 +707,7 @@ struct SettingsView: View {
         .navigationBarTitle("Settings")
     }
 }
+
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
