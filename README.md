@@ -3,7 +3,7 @@
 <table border=0>
     <tr>
         <td>
-            <image src=https://github.com/Saydulayev/CarSpeedTest/blob/mainTest/CarSpeedTest/Screenshots/acceleration.GIF width=230 align=center>
+            <image src=https://github.com/Saydulayev/CarSpeedTest/blob/main/CarSpeedTest/Screenshots/acceleration.GIF width=230 align=center>
         </td>
     </tr>
 </table>
