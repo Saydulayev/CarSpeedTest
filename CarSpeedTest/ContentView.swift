@@ -243,7 +243,7 @@ struct ContentView: View {
 //    }
     
     private func handleTimeTo100Update(averageSpeed: Double, timestamp: Date) throws {
-        if timeTo100 == 0.0 && averageSpeed > 0.0 {
+        if timeTo100 == 0.0 && averageSpeed > 100.0 {
             if let firstTimestamp = locationManager.firstLocationTimestamp {
                 timeTo100 = timestamp.timeIntervalSince(firstTimestamp)
             }
