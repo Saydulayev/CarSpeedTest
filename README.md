@@ -7,6 +7,7 @@
         </td>
     </tr>
 </table>
+                
 # CarSpeedTest
 
 Speed Tracker is an iOS application built using SwiftUI and Firebase that allows users to track their speed and acceleration while driving. The app provides real-time speed data, charts to visualize the speed history, and options to customize measurement settings. Users can also create an account to save their acceleration history securely.
