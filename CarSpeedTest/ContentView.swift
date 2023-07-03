@@ -248,10 +248,9 @@ struct ContentView: View {
     }
     
     private func handleTimeTo200Update(averageSpeed: Double, timestamp: Date) throws {
-        if timeTo200 == 0.0 && averageSpeed >= 200.0 {
+        if timeTo200 == 0.0 && averageSpeed > 200.0 {
             if let firstTimestamp = locationManager.firstLocationTimestamp {
                 timeTo200 = timestamp.timeIntervalSince(firstTimestamp)
-                isAccelerationCompleted = true
             }
         }
     }
