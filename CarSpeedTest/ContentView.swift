@@ -14,8 +14,6 @@ import FirebaseAuth
 import FirebaseDatabase
 import KeychainAccess
 
-
-
 struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var locationManager = LocationManager()
@@ -78,8 +76,8 @@ struct ContentView: View {
                                                 legendTextColor: .gray,
                                                 dropShadowColor: .gray),
                               form: CGSize(width: UIScreen.main.bounds.width - 20, height: 240))
-                .padding(.horizontal, 10)
-                .padding(30)
+                    .padding(.horizontal, 10)
+                    .padding(30)
                 
                 HStack {
                     Button(action: {
@@ -151,9 +149,9 @@ struct ContentView: View {
             SettingsView(measurementInterval: $measurementInterval,
                          displayPrecision: $displayPrecision,
                          selectedUnitIndex: $selectedUnitIndex)
-            .tabItem {
-                Label("Settings", systemImage: "gear")
-            }
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
+                }
         }
         .onAppear {
             locationManager.requestLocationAuthorization()
@@ -190,7 +188,7 @@ struct ContentView: View {
         speedData = []
     }
     
-    func saveAccelerationData(acceleration: Double, timestamp: Date) {
+    private func saveAccelerationData(acceleration: Double, timestamp: Date) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
         let database = Database.database().reference()
@@ -234,8 +232,6 @@ struct ContentView: View {
         }
     }
     
-
-        // if timeTo100 == 0.0 && averageSpeed > 100.0
     private func handleTimeTo100Update(averageSpeed: Double, timestamp: Date) throws {
         if timeTo100 == 0.0 && averageSpeed > 100.0 {
             if let firstTimestamp = locationManager.firstLocationTimestamp {
@@ -243,9 +239,6 @@ struct ContentView: View {
             }
         }
     }
-
-    
-    
     
     private func handleTimeTo100Save(acceleration: Double, timestamp: Date) throws {
         if acceleration >= 100 && timeTo100 == 0.0 {
@@ -279,8 +272,6 @@ struct ContentView: View {
         return 0.0
     }
 }
-
-
 
 struct AccelerationHistoryView: View {
     @ObservedObject var accelerationDataManager = AccelerationDataManager()
@@ -366,7 +357,7 @@ struct AuthView: View {
     @State private var alertMessage = ""
     @State private var accelerationData: [AccelerationData] = []
     @State private var isLoggedIn = false // Track the login status
-    let keychain = Keychain(service: "com.example.app") // Укажите идентификатор вашего приложения
+    let keychain = Keychain(service: "com.example.app") // Specify your app's identifier
     
     var body: some View {
         if isLoggedIn {
@@ -460,30 +451,35 @@ struct AuthView: View {
     func signIn() {
         Auth.auth().signIn(withEmail: email, password: password) { result, error in
             if let error = error {
-                alertMessage = error.localizedDescription
-                isShowingAlert = true
+                showAlert(message: error.localizedDescription)
             } else {
+                saveUserCredentials()
                 isLoggedIn = true
-                saveUserCredentials() // Save user credentials upon successful sign-in
-                email = ""
-                password = ""
             }
         }
     }
     
     func signUp() {
-        guard password == confirmPassword else {
-            alertMessage = "Passwords do not match"
-            isShowingAlert = true
-            return
+        if password == confirmPassword {
+            Auth.auth().createUser(withEmail: email, password: password) { result, error in
+                if let error = error {
+                    showAlert(message: error.localizedDescription)
+                } else {
+                    saveUserCredentials()
+                    isLoggedIn = true
+                }
+            }
+        } else {
+            showAlert(message: "Passwords do not match.")
         }
-        
-        Auth.auth().createUser(withEmail: email, password: password) { result, error in
+    }
+    
+    func resetPassword() {
+        Auth.auth().sendPasswordReset(withEmail: email) { error in
             if let error = error {
-                alertMessage = error.localizedDescription
-                isShowingAlert = true
+                showAlert(message: error.localizedDescription)
             } else {
-                sendVerificationEmail() // Send verification email upon successful sign-up
+                showAlert(message: "Password reset email sent.")
             }
         }
     }
@@ -491,144 +487,94 @@ struct AuthView: View {
     func signOut() {
         do {
             try Auth.auth().signOut()
+            clearUserCredentials()
             isLoggedIn = false
-            clearUserCredentials() // Clear saved user credentials upon sign-out
-        } catch let error {
-            alertMessage = error.localizedDescription
-            isShowingAlert = true
+        } catch {
+            showAlert(message: error.localizedDescription)
         }
     }
     
-    func resetPassword() {
-        Auth.auth().sendPasswordReset(withEmail: email) { error in
-            if let error = error {
-                alertMessage = error.localizedDescription
-                isShowingAlert = true
-            } else {
-                alertMessage = "Password reset email has been sent. Please check your inbox."
-                isShowingAlert = true
-            }
-        }
+    func showAlert(message: String) {
+        alertMessage = message
+        isShowingAlert = true
     }
     
-    func sendVerificationEmail() {
-        Auth.auth().currentUser?.sendEmailVerification { error in
-            if let error = error {
-                alertMessage = error.localizedDescription
-                isShowingAlert = true
-            } else {
-                alertMessage = "Verification email has been sent. Please check your inbox."
-                isShowingAlert = true
-            }
-        }
-    }
-    
-    // Save user credentials to Keychain
-    func saveUserCredentials() {
-        do {
-            try keychain.set(email, key: "UserEmail")
-            try keychain.set(password, key: "UserPassword")
-        } catch let error {
-            print("Error saving user credentials: \(error.localizedDescription)")
-        }
-    }
-    
-    // Restore saved user credentials from Keychain
-    func restoreUserCredentials() {
-        do {
-            if let savedEmail = try keychain.get("UserEmail"),
-               let savedPassword = try keychain.get("UserPassword") {
-                email = savedEmail
-                password = savedPassword
-            }
-        } catch let error {
-            print("Error restoring user credentials: \(error.localizedDescription)")
-        }
-    }
-    
-    // Clear saved user credentials from Keychain
-    func clearUserCredentials() {
-        do {
-            try keychain.remove("UserEmail")
-            try keychain.remove("UserPassword")
-        } catch let error {
-            print("Error clearing user credentials: \(error.localizedDescription)")
-        }
-    }
-    
-    // Check if user is already signed in
     func checkUserSignIn() {
         if Auth.auth().currentUser != nil {
             isLoggedIn = true
         }
     }
-}
-
-struct AccelerationData: Identifiable, Equatable {
-    var id = UUID()
-    let acceleration: Double
-    let speed: Double
-    let timestamp: Date
     
-    var timestampString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, HH:mm:ss"
-        return formatter.string(from: timestamp)
-    }
-}
-
-class AccelerationDataManager: ObservableObject {
-    @Published var accelerationData: [AccelerationData] = []
-    
-    init() {
-        loadAccelerationData()
-    }
-    
-    func loadAccelerationData() {
-        guard let currentUserID = Auth.auth().currentUser?.uid else {
-            accelerationData = [] // If the user is not authenticated, reset the data
-            return
+    func saveUserCredentials() {
+        do {
+            try keychain.set(email, key: "email")
+            try keychain.set(password, key: "password")
+        } catch {
+            showAlert(message: "Failed to save user credentials.")
         }
-        
-        let ref = Database.database().reference(withPath: "acceleration").child(currentUserID)
-        
-        ref.observeSingleEvent(of: .value) { [weak self] snapshot in
-            var data: [AccelerationData] = []
-            
-            for child in snapshot.children {
-                if let childSnapshot = child as? DataSnapshot,
-                   let value = childSnapshot.value as? [String: Any],
-                   let acceleration = value["acceleration"] as? Double,
-                   let speed = value["speed"] as? Double,
-                   let timestamp = value["timestamp"] as? TimeInterval {
-                    
-                    let accelerationData = AccelerationData(acceleration: acceleration, speed: speed, timestamp: Date(timeIntervalSince1970: timestamp))
-                    
-                    data.append(accelerationData)
+    }
+    
+    func restoreUserCredentials() {
+        do {
+            email = try keychain.get("email") ?? ""
+            password = try keychain.get("password") ?? ""
+        } catch {
+            showAlert(message: "Failed to restore user credentials.")
+        }
+    }
+    
+    func clearUserCredentials() {
+        do {
+            try keychain.remove("email")
+            try keychain.remove("password")
+        } catch {
+            showAlert(message: "Failed to clear user credentials.")
+        }
+    }
+}
+
+struct SettingsView: View {
+    @Binding var measurementInterval: Double
+    @Binding var displayPrecision: Int
+    @Binding var selectedUnitIndex: Int
+    
+    private let measurementIntervals = [0.5, 1.0, 2.0, 5.0]
+    private let displayPrecisions = [0, 1, 2]
+    private let speedUnits: [String] = ["km/h", "mph"]
+
+    
+    var body: some View {
+        VStack {
+            Form {
+                Section(header: Text("Measurement Interval")) {
+                    Picker("Measurement Interval", selection: $measurementInterval) {
+                        ForEach(measurementIntervals, id: \.self) { interval in
+                            Text("\(interval, specifier: "%.1f") sec.")
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                }
+                
+                Section(header: Text("Display Precision")) {
+                    Picker("Display Precision", selection: $displayPrecision) {
+                        ForEach(displayPrecisions, id: \.self) { precision in
+                            Text("\(precision)")
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                }
+                
+                Section(header: Text("Speed Unit")) {
+                    Picker("Speed Unit", selection: $selectedUnitIndex) {
+                        ForEach(0..<speedUnits.count) { index in
+                            Text(speedUnits[index])
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
                 }
             }
-            
-            DispatchQueue.main.async {
-                self?.accelerationData = data
-            }
         }
-    }
-    
-    func deleteAccelerationData() {
-        guard let currentUserID = Auth.auth().currentUser?.uid else {
-            return
-        }
-        
-        let ref = Database.database().reference(withPath: "acceleration").child(currentUserID)
-        
-        ref.removeValue { [weak self] error, _ in
-            if let error = error {
-                print("Failed to delete acceleration data: \(error)")
-            } else {
-                print("Acceleration data deleted successfully")
-                self?.accelerationData = [] // Reset the data after deletion
-            }
-        }
+        .padding()
     }
 }
 
@@ -637,12 +583,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     @Published var averageSpeed: Double = 0.0
     var firstLocationTimestamp: Date?
-    
-    var updateInterval: Double = 1.0
+    var updateInterval: TimeInterval = 1.0
     
     override init() {
         super.init()
         locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
     }
     
     func requestLocationAuthorization() {
@@ -651,6 +597,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     func startUpdatingLocation() {
         locationManager.startUpdatingLocation()
+        firstLocationTimestamp = Date()
     }
     
     func stopUpdatingLocation() {
@@ -660,47 +607,37 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         
-        if firstLocationTimestamp == nil {
-            firstLocationTimestamp = location.timestamp
-        }
-        
         averageSpeed = location.speed
     }
 }
 
-struct SettingsView: View {
-    @Binding var measurementInterval: Double
-    @Binding var displayPrecision: Int
-    @Binding var selectedUnitIndex: Int
+class AccelerationDataManager: ObservableObject {
+    @Published var accelerationData: [AccelerationData] = []
     
-    private let speedUnits: [String] = ["km/h", "mph"]
+    func loadAccelerationData() {
+        // Load acceleration data from the database and update the `accelerationData` property
+        // with the retrieved data
+    }
     
-    var body: some View {
-        Form {
-            Section(header: Text("Measurement Interval")) {
-                Slider(value: $measurementInterval, in: 0...5, step: 0.1) {
-                    Text("Interval: \(measurementInterval, specifier: "%.1f") seconds")
-                }
-            }
-            
-            Section(header: Text("Display Precision")) {
-                Stepper(value: $displayPrecision, in: 0...2) {
-                    Text("Precision: \(displayPrecision)")
-                }
-            }
-            
-            Section(header: Text("Preferred Unit")) {
-                Picker("Unit", selection: $selectedUnitIndex) {
-                    ForEach(0..<speedUnits.count, id: \.self) { index in
-                        Text(speedUnits[index])
-                    }
-                }
-                .pickerStyle(SegmentedPickerStyle())
-            }
-        }
-        .navigationBarTitle("Settings")
+    func deleteAccelerationData() {
+        // Delete acceleration data from the database and update the `accelerationData` property
+        // by removing the deleted data
     }
 }
+
+struct AccelerationData: Identifiable {
+    let id = UUID()
+    let acceleration: Double
+    let speed: Double
+    let timestamp: Date
+    
+    var timestampString: String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMM d, yyyy 'at' h:mm a"
+        return dateFormatter.string(from: timestamp)
+    }
+}
+
 
 
 struct ContentView_Previews: PreviewProvider {
