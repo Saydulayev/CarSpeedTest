@@ -127,7 +127,6 @@ struct ContentView: View {
                             )
                     }
                     .padding()
-                    
                 }
                 .padding(.horizontal)
                 
@@ -188,7 +187,7 @@ struct ContentView: View {
         speedData = []
     }
     
-    private func saveAccelerationData(acceleration: Double, timestamp: Date) {
+    func saveAccelerationData(acceleration: Double, timestamp: Date) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
         let database = Database.database().reference()
@@ -357,7 +356,7 @@ struct AuthView: View {
     @State private var alertMessage = ""
     @State private var accelerationData: [AccelerationData] = []
     @State private var isLoggedIn = false // Track the login status
-    let keychain = Keychain(service: "com.example.app") // Specify your app's identifier
+    let keychain = Keychain(service: "com.example.app") // Укажите идентификатор вашего приложения
     
     var body: some View {
         if isLoggedIn {
@@ -451,8 +450,12 @@ struct AuthView: View {
     func signIn() {
         Auth.auth().signIn(withEmail: email, password: password) { result, error in
             if let error = error {
-                showAlert(message: error.localizedDescription)
+                print("Failed to sign in: \(error.localizedDescription)")
+                alertMessage = error.localizedDescription
+                isShowingAlert = true
             } else {
+                print("Successfully signed in")
+                // Save user credentials for future sign in
                 saveUserCredentials()
                 isLoggedIn = true
             }
@@ -460,26 +463,36 @@ struct AuthView: View {
     }
     
     func signUp() {
-        if password == confirmPassword {
-            Auth.auth().createUser(withEmail: email, password: password) { result, error in
-                if let error = error {
-                    showAlert(message: error.localizedDescription)
-                } else {
-                    saveUserCredentials()
-                    isLoggedIn = true
-                }
+        if password != confirmPassword {
+            alertMessage = "Passwords do not match"
+            isShowingAlert = true
+            return
+        }
+        
+        Auth.auth().createUser(withEmail: email, password: password) { result, error in
+            if let error = error {
+                print("Failed to sign up: \(error.localizedDescription)")
+                alertMessage = error.localizedDescription
+                isShowingAlert = true
+            } else {
+                print("Successfully signed up")
+                // Save user credentials for future sign in
+                saveUserCredentials()
+                isLoggedIn = true
             }
-        } else {
-            showAlert(message: "Passwords do not match.")
         }
     }
     
     func resetPassword() {
         Auth.auth().sendPasswordReset(withEmail: email) { error in
             if let error = error {
-                showAlert(message: error.localizedDescription)
+                print("Failed to reset password: \(error.localizedDescription)")
+                alertMessage = error.localizedDescription
+                isShowingAlert = true
             } else {
-                showAlert(message: "Password reset email sent.")
+                print("Password reset email sent")
+                alertMessage = "Password reset email sent"
+                isShowingAlert = true
             }
         }
     }
@@ -487,16 +500,12 @@ struct AuthView: View {
     func signOut() {
         do {
             try Auth.auth().signOut()
-            clearUserCredentials()
+            // Remove saved user credentials
+            removeUserCredentials()
             isLoggedIn = false
         } catch {
-            showAlert(message: error.localizedDescription)
+            print("Failed to sign out: \(error.localizedDescription)")
         }
-    }
-    
-    func showAlert(message: String) {
-        alertMessage = message
-        isShowingAlert = true
     }
     
     func checkUserSignIn() {
@@ -507,28 +516,28 @@ struct AuthView: View {
     
     func saveUserCredentials() {
         do {
-            try keychain.set(email, key: "email")
-            try keychain.set(password, key: "password")
+            try keychain.set(email, key: "userEmail")
+            try keychain.set(password, key: "userPassword")
         } catch {
-            showAlert(message: "Failed to save user credentials.")
+            print("Failed to save user credentials: \(error.localizedDescription)")
         }
     }
     
     func restoreUserCredentials() {
         do {
-            email = try keychain.get("email") ?? ""
-            password = try keychain.get("password") ?? ""
+            email = try keychain.get("userEmail") ?? ""
+            password = try keychain.get("userPassword") ?? ""
         } catch {
-            showAlert(message: "Failed to restore user credentials.")
+            print("Failed to restore user credentials: \(error.localizedDescription)")
         }
     }
     
-    func clearUserCredentials() {
+    func removeUserCredentials() {
         do {
-            try keychain.remove("email")
-            try keychain.remove("password")
+            try keychain.remove("userEmail")
+            try keychain.remove("userPassword")
         } catch {
-            showAlert(message: "Failed to clear user credentials.")
+            print("Failed to remove user credentials: \(error.localizedDescription)")
         }
     }
 }
@@ -538,43 +547,86 @@ struct SettingsView: View {
     @Binding var displayPrecision: Int
     @Binding var selectedUnitIndex: Int
     
-    private let measurementIntervals = [0.5, 1.0, 2.0, 5.0]
-    private let displayPrecisions = [0, 1, 2]
+    private let measurementIntervals: [Double] = [0.1, 0.5, 1.0, 2.0]
+    private let displayPrecisions: [Int] = [0, 1, 2, 3]
     private let speedUnits: [String] = ["km/h", "mph"]
 
     
     var body: some View {
-        VStack {
-            Form {
-                Section(header: Text("Measurement Interval")) {
-                    Picker("Measurement Interval", selection: $measurementInterval) {
-                        ForEach(measurementIntervals, id: \.self) { interval in
-                            Text("\(interval, specifier: "%.1f") sec.")
-                        }
+        Form {
+            Section(header: Text("Measurement Interval")) {
+                Picker("Measurement Interval", selection: $measurementInterval) {
+                    ForEach(measurementIntervals, id: \.self) { interval in
+                        Text(String(format: "%.1f seconds", interval))
+                            .tag(interval)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
                 }
-                
-                Section(header: Text("Display Precision")) {
-                    Picker("Display Precision", selection: $displayPrecision) {
-                        ForEach(displayPrecisions, id: \.self) { precision in
-                            Text("\(precision)")
-                        }
+                .pickerStyle(SegmentedPickerStyle())
+            }
+            
+            Section(header: Text("Display Precision")) {
+                Picker("Display Precision", selection: $displayPrecision) {
+                    ForEach(displayPrecisions, id: \.self) { precision in
+                        Text(String(precision))
+                            .tag(precision)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
                 }
-                
-                Section(header: Text("Speed Unit")) {
-                    Picker("Speed Unit", selection: $selectedUnitIndex) {
-                        ForEach(0..<speedUnits.count) { index in
-                            Text(speedUnits[index])
-                        }
+                .pickerStyle(SegmentedPickerStyle())
+            }
+            
+            Section(header: Text("Speed Unit")) {
+                Picker("Speed Unit", selection: $selectedUnitIndex) {
+                    ForEach(0..<speedUnits.count, id: \.self) { index in
+                        Text(speedUnits[index])
+                            .tag(index)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
                 }
+                .pickerStyle(SegmentedPickerStyle())
             }
         }
-        .padding()
+        .navigationBarTitle("Settings")
+    }
+}
+
+class AccelerationDataManager: ObservableObject {
+    @Published var accelerationData: [AccelerationData] = []
+    
+    func loadAccelerationData() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let database = Database.database().reference()
+        let userAccelerationRef = database.child("acceleration").child(userId)
+        
+        userAccelerationRef.observe(.value) { [weak self] snapshot in
+            guard let self = self else { return }
+            
+            var data: [AccelerationData] = []
+            
+            for child in snapshot.children {
+                if let snapshot = child as? DataSnapshot,
+                   let value = snapshot.value as? [String: Any],
+                   let acceleration = value["acceleration"] as? Double,
+                   let speed = value["speed"] as? Double,
+                   let timestamp = value["timestamp"] as? TimeInterval {
+                    
+                    let accelerationData = AccelerationData(acceleration: acceleration,
+                                                            speed: speed,
+                                                            timestamp: Date(timeIntervalSince1970: timestamp))
+                    data.append(accelerationData)
+                }
+            }
+            
+            self.accelerationData = data
+        }
+    }
+    
+    func deleteAccelerationData() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let database = Database.database().reference()
+        let userAccelerationRef = database.child("acceleration").child(userId)
+        
+        userAccelerationRef.removeValue()
     }
 }
 
@@ -611,20 +663,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 }
 
-class AccelerationDataManager: ObservableObject {
-    @Published var accelerationData: [AccelerationData] = []
-    
-    func loadAccelerationData() {
-        // Load acceleration data from the database and update the `accelerationData` property
-        // with the retrieved data
-    }
-    
-    func deleteAccelerationData() {
-        // Delete acceleration data from the database and update the `accelerationData` property
-        // by removing the deleted data
-    }
-}
-
 struct AccelerationData: Identifiable {
     let id = UUID()
     let acceleration: Double
@@ -632,11 +670,12 @@ struct AccelerationData: Identifiable {
     let timestamp: Date
     
     var timestampString: String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MMM d, yyyy 'at' h:mm a"
-        return dateFormatter.string(from: timestamp)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter.string(from: timestamp)
     }
 }
+
 
 
 
