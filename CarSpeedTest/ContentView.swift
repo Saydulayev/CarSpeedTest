@@ -629,15 +629,34 @@ class AccelerationDataManager: ObservableObject {
     }
 }
 
+class GlobalContext {
+    static var startTime: Date?
+    static var endTime: Date?
+}
+
+enum SpeedUnit {
+    case kmh
+    case mph
+}
+
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
-    
+
     @Published var averageSpeed: Double = 0.0
     var firstLocationTimestamp: Date?
     var updateInterval: TimeInterval = 1.0
-    
+
+    @Published var targetSpeed: Double = 100
+    @Published var speedUnit: SpeedUnit = .kmh
+
+    @Published var startTime: Date?
+    @Published var endTime: Date?
+    @Published var startSpeed: Double = 0
+
     override init() {
         super.init()
+        self.startTime = nil
+        self.endTime = nil
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
     }
@@ -645,6 +664,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     func requestLocationAuthorization() {
         locationManager.requestWhenInUseAuthorization()
     }
+    
+    func startAccelerationMeasurement() {
+        self.startTime = Date()
+        self.startSpeed = self.averageSpeed
+    }
+
     
     func startUpdatingLocation() {
         locationManager.startUpdatingLocation()
@@ -655,11 +680,32 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         locationManager.stopUpdatingLocation()
     }
     
+    
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
+        guard let location = locations.last, location.speed >= 0 else { return }
         
-        averageSpeed = location.speed
+        let speed = (speedUnit == .kmh) ? location.speed * 3.6 : location.speed * 2.23694
+
+        if speed == 0 && startTime == nil {
+            startTime = Date()
+        }
+
+        if speed >= targetSpeed && startTime != nil && endTime == nil {
+            endTime = Date()
+            
+            if let start = startTime, let end = endTime {
+                let timeTaken = end.timeIntervalSince(start)
+                print("Time taken for 0 to \(targetSpeed) \(speedUnit == .kmh ? "km/h" : "mph") is \(timeTaken) seconds.")
+                startTime = nil
+                endTime = nil
+            }
+
+        }
+        averageSpeed = speed
     }
+
+
 }
 
 struct AccelerationData: Identifiable {
