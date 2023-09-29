@@ -80,9 +80,6 @@ Contributions to the Speed Tracker app are welcome! If you find any issues or wa
 
 When contributing, please follow the existing code style and adhere to good programming practices. Additionally, make sure to test your changes thoroughly.
 
-## License
-
-The Speed Tracker app is licensed under the [MIT License](LICENSE).
 
 ## Acknowledgments
 
