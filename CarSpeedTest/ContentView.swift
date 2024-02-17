@@ -28,6 +28,8 @@ struct ContentView: View {
     @State private var isAccelerationCompleted = false
     
     private let speedUnits: [String] = ["km/h", "mph"]
+    let accelerationDataManager = AccelerationDataManager()
+
     
     var currentSpeedUnit: String {
         speedUnits[selectedUnitIndex]
@@ -192,6 +194,7 @@ struct ContentView: View {
         
         let database = Database.database().reference()
         let userAccelerationRef = database.child("acceleration").child(userId)
+        let newAccelerationDataRef = userAccelerationRef.childByAutoId()  // Создаем уникальный идентификатор для новых данных
         
         let data: [String: Any] = [
             "acceleration": acceleration,
@@ -199,7 +202,7 @@ struct ContentView: View {
             "timestamp": timestamp.timeIntervalSince1970
         ]
         
-        userAccelerationRef.setValue(data) { error, _ in
+        newAccelerationDataRef.setValue(data) { error, _ in
             if let error = error {
                 print("Failed to save acceleration data: \(error)")
             } else {
@@ -211,6 +214,7 @@ struct ContentView: View {
             }
         }
     }
+
     
     private func handleAccelerationUpdate(averageSpeed: Double, timestamp: Date) throws {
         let acceleration = calculateAcceleration(speed: averageSpeed)
@@ -618,6 +622,22 @@ class AccelerationDataManager: ObservableObject {
             self.accelerationData = data
         }
     }
+    func saveAccelerationData(accelerationData: AccelerationData) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let database = Database.database().reference()
+        let userAccelerationRef = database.child("acceleration").child(userId)
+        let newAccelerationDataRef = userAccelerationRef.childByAutoId()  // Создаем уникальный идентификатор для новых данных
+        
+        let data: [String: Any] = [
+            "acceleration": accelerationData.acceleration,
+            "speed": accelerationData.speed,
+            "timestamp": accelerationData.timestamp.timeIntervalSince1970
+        ]
+        
+        newAccelerationDataRef.setValue(data)
+    }
+
     
     func deleteAccelerationData() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
